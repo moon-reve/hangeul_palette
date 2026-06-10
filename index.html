@@ -708,6 +708,272 @@
         });
       }
 
+      const heroTitle = document.querySelector(".hero-title");
+      const heroTitleOriginalMarkup = heroTitle?.innerHTML ?? "";
+      const heroTitleScrolledMarkup = `
+        <span class="title-line">사람을 향한</span>
+        <span class="title-line"><span class="title-strong">마음</span>이었습니다.</span>
+      `;
+      const heroTitleDarkMarkup = `
+        <span class="title-line"><span class="title-strong">서로의 마음</span>이 닿지 않던 시대</span>
+      `;
+      let heroTitleState = "original";
+      let heroTitleSwapTimer = null;
+      let heroTitleScrollAmount = 0;
+      let heroTitleLastChangeAt = 0;
+      let heroTitleInkProgress = 0;
+      const heroTitleScrollThreshold = 260;
+      const heroTitleChangeCooldown = 1150;
+      const heroTitleInkScrollDistance = 520;
+
+      function splitHeroTitleCharacters({ animate = true } = {}) {
+        let charIndex = 0;
+
+        if (!heroTitle) {
+          return;
+        }
+
+        heroTitle.querySelectorAll(".title-line").forEach((line) => {
+          const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+          const textNodes = [];
+
+          while (walker.nextNode()) {
+            textNodes.push(walker.currentNode);
+          }
+
+          textNodes.forEach((textNode) => {
+            const fragment = document.createDocumentFragment();
+
+            Array.from(textNode.textContent).forEach((char) => {
+              if (char.trim() === "") {
+                fragment.appendChild(document.createTextNode(char));
+                return;
+              }
+
+              const span = document.createElement("span");
+              span.className = "title-char";
+              span.style.setProperty("--char-index", charIndex);
+              span.textContent = char;
+              fragment.appendChild(span);
+              charIndex += 1;
+            });
+
+            textNode.replaceWith(fragment);
+          });
+        });
+
+        if (animate) {
+          requestAnimationFrame(() => {
+            heroTitle.classList.add("is-char-ready");
+          });
+        }
+      }
+
+      function updateDarkTitleInk(progress) {
+        if (!heroTitle) {
+          return;
+        }
+
+        heroTitleInkProgress = Math.max(0, Math.min(1, progress));
+
+        heroTitle.querySelectorAll(".title-char").forEach((char, index) => {
+          const charProgress = Math.max(0, Math.min(1, heroTitleInkProgress * 1.35 - index * 0.045));
+          const lift = (1 - charProgress) * 0.14;
+          const scale = 0.985 + charProgress * 0.015;
+          const blur = (1 - charProgress) * 8;
+          const contrast = 1 + charProgress * 0.26;
+          const glow = charProgress * 18;
+          const haze = (1 - charProgress) * 22;
+
+          char.style.setProperty("--char-ink", charProgress.toFixed(3));
+          char.style.setProperty("--char-lift", `${lift.toFixed(3)}em`);
+          char.style.setProperty("--char-scale", scale.toFixed(3));
+          char.style.setProperty("--char-blur", `${blur.toFixed(2)}px`);
+          char.style.setProperty("--char-contrast", contrast.toFixed(3));
+          char.style.setProperty("--char-glow", `${glow.toFixed(2)}px`);
+          char.style.setProperty("--char-haze", `${haze.toFixed(2)}px`);
+        });
+      }
+
+      splitHeroTitleCharacters();
+
+      function setHeroTitleState(nextState) {
+        if (!heroTitle || heroTitleState === nextState) {
+          return;
+        }
+
+        heroTitleState = nextState;
+        heroTitleScrollAmount = 0;
+        heroTitleInkProgress = nextState === "dark" ? 0 : 1;
+        heroTitleLastChangeAt = performance.now();
+        clearTimeout(heroTitleSwapTimer);
+        heroTitle.classList.remove("is-ink-reveal");
+        heroTitle.classList.add("is-title-exiting");
+
+        heroTitleSwapTimer = setTimeout(() => {
+          heroTitle.classList.remove("is-char-ready", "is-title-exiting");
+          hero.classList.toggle("is-dark-scene", nextState === "dark");
+          heroTitle.innerHTML =
+            nextState === "dark"
+              ? heroTitleDarkMarkup
+              : nextState === "scrolled"
+                ? heroTitleScrolledMarkup
+                : heroTitleOriginalMarkup;
+          splitHeroTitleCharacters({ animate: nextState !== "dark" });
+
+          if (nextState === "dark") {
+            heroTitle.classList.add("is-ink-reveal");
+            updateDarkTitleInk(0);
+          }
+        }, 760);
+      }
+
+      function keepHeroScreenStill() {
+        if (window.scrollY > 0 && heroTitleState !== "original") {
+          window.scrollTo(0, 0);
+        }
+      }
+
+      function canChangeHeroTitle() {
+        return performance.now() - heroTitleLastChangeAt > heroTitleChangeCooldown;
+      }
+
+      function handleDarkTitleInkScroll(deltaY) {
+        if (heroTitleState !== "dark") {
+          return false;
+        }
+
+        if (deltaY > 0 && heroTitleInkProgress < 1) {
+          heroTitleScrollAmount = 0;
+          updateDarkTitleInk(heroTitleInkProgress + deltaY / heroTitleInkScrollDistance);
+          return true;
+        }
+
+        if (deltaY < 0 && heroTitleInkProgress > 0) {
+          heroTitleScrollAmount = 0;
+          updateDarkTitleInk(heroTitleInkProgress + deltaY / heroTitleInkScrollDistance);
+          return true;
+        }
+
+        return false;
+      }
+
+      function moveHeroTitleForward() {
+        if (heroTitleState === "original") {
+          setHeroTitleState("scrolled");
+        } else if (heroTitleState === "scrolled") {
+          setHeroTitleState("dark");
+        }
+      }
+
+      function moveHeroTitleBackward() {
+        if (heroTitleState === "dark") {
+          setHeroTitleState("scrolled");
+        } else if (heroTitleState === "scrolled") {
+          setHeroTitleState("original");
+        }
+      }
+
+      window.addEventListener(
+        "wheel",
+        (event) => {
+          if (window.scrollY > 0) {
+            return;
+          }
+
+          if (event.deltaY > 0) {
+            event.preventDefault();
+
+            if (handleDarkTitleInkScroll(event.deltaY)) {
+              keepHeroScreenStill();
+              return;
+            }
+
+            heroTitleScrollAmount = Math.max(0, heroTitleScrollAmount + event.deltaY);
+
+            if (heroTitleState !== "dark" && heroTitleScrollAmount >= heroTitleScrollThreshold && canChangeHeroTitle()) {
+              moveHeroTitleForward();
+            }
+
+            keepHeroScreenStill();
+          } else if (event.deltaY < 0) {
+            event.preventDefault();
+
+            if (handleDarkTitleInkScroll(event.deltaY)) {
+              keepHeroScreenStill();
+              return;
+            }
+
+            heroTitleScrollAmount = Math.min(0, heroTitleScrollAmount + event.deltaY);
+
+            if (heroTitleState !== "original" && Math.abs(heroTitleScrollAmount) >= heroTitleScrollThreshold && canChangeHeroTitle()) {
+              moveHeroTitleBackward();
+            }
+
+            keepHeroScreenStill();
+          }
+        },
+        { passive: false },
+      );
+
+      let heroTitleTouchY = null;
+
+      window.addEventListener(
+        "touchstart",
+        (event) => {
+          heroTitleTouchY = event.touches[0]?.clientY ?? null;
+        },
+        { passive: true },
+      );
+
+      window.addEventListener(
+        "touchmove",
+        (event) => {
+          if (window.scrollY > 0 || heroTitleTouchY === null) {
+            return;
+          }
+
+          const currentY = event.touches[0]?.clientY ?? heroTitleTouchY;
+          const deltaY = heroTitleTouchY - currentY;
+          heroTitleTouchY = currentY;
+
+          if (deltaY > 0) {
+            event.preventDefault();
+
+            if (handleDarkTitleInkScroll(deltaY)) {
+              keepHeroScreenStill();
+              return;
+            }
+
+            heroTitleScrollAmount = Math.max(0, heroTitleScrollAmount + deltaY);
+
+            if (heroTitleState !== "dark" && heroTitleScrollAmount >= heroTitleScrollThreshold && canChangeHeroTitle()) {
+              moveHeroTitleForward();
+            }
+
+            keepHeroScreenStill();
+          } else if (deltaY < 0) {
+            event.preventDefault();
+
+            if (handleDarkTitleInkScroll(deltaY)) {
+              keepHeroScreenStill();
+              return;
+            }
+
+            heroTitleScrollAmount = Math.min(0, heroTitleScrollAmount + deltaY);
+
+            if (heroTitleState !== "original" && Math.abs(heroTitleScrollAmount) >= heroTitleScrollThreshold && canChangeHeroTitle()) {
+              moveHeroTitleBackward();
+            }
+
+            keepHeroScreenStill();
+          }
+        },
+        { passive: false },
+      );
+
+      window.addEventListener("scroll", keepHeroScreenStill, { passive: true });
+
       document.querySelectorAll(".hero-label, .hero-title").forEach((element) => {
         element.addEventListener("pointerenter", () => {
           document.body.classList.add("cursor-hover");

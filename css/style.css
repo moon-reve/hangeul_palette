@@ -144,6 +144,23 @@
         opacity: 0.52;
       }
 
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(circle at 48% 45%, rgba(42, 42, 42, 0.78), transparent 36%),
+          linear-gradient(180deg, #1a1a1a 0%, #121212 100%);
+        opacity: 0;
+        transition: opacity 1.35s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .hero.is-dark-scene::after {
+        opacity: 1;
+      }
+
       @keyframes paper-drift {
         0% {
           background-position:
@@ -247,11 +264,17 @@
         z-index: 1;
         pointer-events: none;
         opacity: 0;
-        transition: opacity 0.45s ease;
+        transition:
+          opacity 0.45s ease,
+          filter 1.35s cubic-bezier(0.22, 1, 0.36, 1);
       }
 
       .emboss-stage.is-ready {
         opacity: 1;
+      }
+
+      .hero.is-dark-scene .emboss-stage {
+        filter: brightness(0.36) contrast(1.36);
       }
 
       .emboss-object {
@@ -335,15 +358,105 @@
         letter-spacing: 0;
         white-space: nowrap;
         color: #6f6f6f;
+        transition:
+          color 1.05s cubic-bezier(0.22, 1, 0.36, 1),
+          left 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+          top 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+          transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .hero.is-dark-scene .hero-title {
+        left: 50%;
+        top: 50%;
+        color: #a8a8a8;
+        transform: translate(-50%, -50%);
       }
 
       .title-line {
         display: block;
       }
 
+      .title-char {
+        display: inline-block;
+      }
+
+      .hero-title.is-char-ready .title-char {
+        clip-path: inset(100% 0 0 0);
+        opacity: 0;
+        transform: translate3d(0, 0.82em, 0);
+        animation: hero-title-char-slide-up 1.34s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+        animation-delay: calc(var(--char-index) * 0.075s);
+        will-change: transform, opacity, clip-path;
+      }
+
+      .hero-title.is-title-exiting .title-char {
+        animation: hero-title-char-slide-out 0.78s cubic-bezier(0.55, 0, 0.1, 1) forwards;
+        animation-delay: calc(var(--char-index) * 0.026s);
+      }
+
+      .hero-title.is-ink-reveal .title-char {
+        --char-ink: 0;
+        --char-lift: 0.14em;
+        --char-scale: 0.985;
+        --char-blur: 8px;
+        --char-contrast: 1;
+        --char-glow: 0px;
+        --char-haze: 22px;
+        clip-path: none;
+        opacity: var(--char-ink);
+        transform: translate3d(0, var(--char-lift), 0) scale(var(--char-scale));
+        filter: blur(var(--char-blur)) contrast(var(--char-contrast));
+        animation: none;
+        text-shadow:
+          0 0 var(--char-glow) rgba(255, 255, 255, 0.34),
+          0 0 var(--char-haze) rgba(255, 255, 255, 0.16);
+        transition:
+          opacity 180ms ease,
+          filter 220ms ease,
+          text-shadow 220ms ease,
+          transform 220ms ease;
+      }
+
       .title-strong {
         color: #333;
         font-weight: 800;
+        transition: color 1.05s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .hero.is-dark-scene .title-strong {
+        color: #fff;
+      }
+
+      @keyframes hero-title-char-slide-up {
+        0% {
+          clip-path: inset(100% 0 0 0);
+          opacity: 0;
+          transform: translate3d(0, 0.82em, 0);
+        }
+
+        42% {
+          opacity: 1;
+        }
+
+        100% {
+          clip-path: inset(0 0 0 0);
+          opacity: 1;
+          transform: translate3d(0, 0, 0);
+        }
+      }
+
+      @keyframes hero-title-char-slide-out {
+        0% {
+          clip-path: inset(0 0 0 0);
+          opacity: 1;
+          transform: translate3d(0, 0, 0);
+        }
+
+        100% {
+          clip-path: inset(0 0 100% 0);
+          opacity: 0;
+          transform: translate3d(0, -0.78em, 0);
+        }
       }
 
       .letter-cloud {
@@ -448,6 +561,19 @@
         .cursor-ring,
         .cursor-dot {
           display: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .hero-title.is-char-ready .title-char {
+          clip-path: none;
+          opacity: 1;
+          transform: none;
+          animation: none;
+        }
+
+        .hero-title.is-title-exiting .title-char {
+          animation: none;
         }
       }
 
