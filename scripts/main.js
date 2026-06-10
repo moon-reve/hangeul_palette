@@ -65,57 +65,6 @@ const performanceTuning = {
   maxInkMarks: 68,
 };
 
-const embossTierConfig = {
-  weak: {
-    activeFill: "#2b2825",
-    recolor: true,
-    restShadow: { offsetScale: 0, blurScale: 0, highlightAlpha: 0, shadeAlpha: 0 },
-    activeShadow: { offsetScale: 0, blurScale: 0, highlightAlpha: 0, shadeAlpha: 0, holdHighlightAlpha: 0, holdShadeAlpha: 0 },
-  },
-  middle: {
-    activeFill: "#f0f0f0",
-    recolor: false,
-    restShadow: { offsetScale: 0, blurScale: 0, highlightAlpha: 0, shadeAlpha: 0 },
-    activeShadow: { offsetScale: 1, blurScale: 1, highlightAlpha: 0.92, shadeAlpha: 0.42, holdHighlightAlpha: 0.72, holdShadeAlpha: 0.34 },
-  },
-  strong: {
-    activeFill: "#f0f0f0",
-    recolor: false,
-    restShadow: { offsetScale: 0, blurScale: 0, highlightAlpha: 0, shadeAlpha: 0 },
-    activeShadow: { offsetScale: 1.3, blurScale: 0.35, highlightAlpha: 0.97, shadeAlpha: 0.52, holdHighlightAlpha: 0.82, holdShadeAlpha: 0.42 },
-  },
-};
-
-function getEmbossTier(path) {
-  const groupId = path.closest("g[id]")?.getAttribute("id") || "";
-
-  if (groupId.startsWith("weak")) return "weak";
-  if (groupId.startsWith("strong")) return "strong";
-  return "middle";
-}
-
-function buildEmbossFilter(polarity, shadow) {
-  if (!shadow || (shadow.offsetScale <= 0 && shadow.blurScale <= 0) || (shadow.highlightAlpha <= 0 && shadow.shadeAlpha <= 0)) {
-    return "drop-shadow(0 0 0 rgba(255, 255, 255, 0)) drop-shadow(0 0 0 rgba(132, 138, 136, 0))";
-  }
-
-  const highlightOffset = (1 * shadow.offsetScale).toFixed(2);
-  const highlightBlur = (1 * shadow.blurScale).toFixed(2);
-  const shadeOffsetX = (2 * shadow.offsetScale).toFixed(2);
-  const shadeOffsetY = (3 * shadow.offsetScale).toFixed(2);
-  const shadeBlur = (3 * shadow.blurScale).toFixed(2);
-  const highlight =
-    polarity > 0
-      ? `-${highlightOffset}px -${highlightOffset}px ${highlightBlur}px`
-      : `${highlightOffset}px ${highlightOffset}px ${highlightBlur}px`;
-  const shade =
-    polarity > 0
-      ? `${shadeOffsetX}px ${shadeOffsetY}px ${shadeBlur}px`
-      : `-${shadeOffsetX}px -${shadeOffsetY}px ${shadeBlur}px`;
-
-  return `drop-shadow(${highlight} rgba(255, 255, 255, ${shadow.highlightAlpha})) drop-shadow(${shade} rgba(104, 110, 108, ${shadow.shadeAlpha}))`;
-}
-
 function resizeWashCanvas() {
   const rect = hero.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -185,9 +134,6 @@ function setupEmbossField() {
       const column = Math.floor(centerX / embossCellSize);
       const row = Math.floor(centerY / embossCellSize);
       const key = getEmbossKey(column, row);
-      const tier = getEmbossTier(path);
-      const config = embossTierConfig[tier];
-      const polarity = index % 5 === 0 ? -1 : 1;
       const item = {
         path,
         centerX,
@@ -195,18 +141,14 @@ function setupEmbossField() {
         width: box.width,
         height: box.height,
         lastTriggerAt: 0,
-        polarity,
+        polarity: index % 5 === 0 ? -1 : 1,
         jitter: Math.random() * Math.PI * 2,
-        tier,
-        config,
-        restFilter: buildEmbossFilter(polarity, config.restShadow),
       };
 
       path.dataset.embossPath = "";
-      path.dataset.embossTier = tier;
       path.style.fill = "#f0f0f0";
       path.style.opacity = "0.1";
-      path.style.filter = item.restFilter;
+      path.style.filter = "drop-shadow(0 0 0 rgba(255, 255, 255, 0)) drop-shadow(0 0 0 rgba(132, 138, 136, 0))";
 
       if (!embossGrid.has(key)) {
         embossGrid.set(key, []);
@@ -254,32 +196,22 @@ function holdEmboss(x, y) {
   const now = performance.now();
 
   getEmbossCandidates(x, y, 210, performanceTuning.holdPathLimit).forEach(({ item, distance }) => {
-    const { config } = item;
     const intensity = Math.max(0, 1 - distance / 210);
     const lift = (1.2 + intensity * 4.8) * item.polarity;
     const wave = Math.sin(now * 0.004 + item.jitter) * (0.8 + intensity * 1.6);
-    const filter = buildEmbossFilter(item.polarity, {
-      offsetScale: config.activeShadow.offsetScale,
-      blurScale: config.activeShadow.blurScale,
-      highlightAlpha: config.activeShadow.holdHighlightAlpha,
-      shadeAlpha: config.activeShadow.holdShadeAlpha,
-    });
-    const tween = {
+    const highlight = item.polarity > 0 ? "-1px -1px 1px" : "1px 1px 1px";
+    const shade = item.polarity > 0 ? "2px 3px 3px" : "-2px -3px 3px";
+
+    gsap.to(item.path, {
       x: Math.cos(item.jitter) * wave,
       y: -lift + wave * 0.35,
       scale: 1 + intensity * 0.01,
       opacity: 0.38 + intensity * 0.42,
-      filter,
+      filter: `drop-shadow(${highlight} rgba(255, 255, 255, 0.72)) drop-shadow(${shade} rgba(104, 110, 108, 0.34))`,
       duration: 0.72,
       ease: "sine.inOut",
       overwrite: "auto",
-    };
-
-    if (config.recolor) {
-      tween.fill = config.activeFill;
-    }
-
-    gsap.to(item.path, tween);
+    });
   });
 }
 
@@ -305,7 +237,6 @@ function triggerEmboss(x, y, force = 1, mode = "hover") {
   const limit = mode === "auto" ? performanceTuning.autoPathLimit : performanceTuning.hoverPathLimit;
 
   getEmbossCandidates(x, y, radius, limit).forEach(({ item, distance }) => {
-    const { config } = item;
     const isAuto = mode === "auto";
     const intensity = Math.max(0, 1 - distance / radius) * force;
 
@@ -319,12 +250,8 @@ function triggerEmboss(x, y, force = 1, mode = "hover") {
     const spread = 1 + intensity * 0.018;
     const restOpacity = 0.14;
     const opacity = Math.min(isAuto ? 0.82 : 0.94, 0.34 + intensity * 0.74);
-    const activeFilter = buildEmbossFilter(item.polarity, {
-      offsetScale: config.activeShadow.offsetScale,
-      blurScale: config.activeShadow.blurScale,
-      highlightAlpha: config.activeShadow.highlightAlpha,
-      shadeAlpha: config.activeShadow.shadeAlpha,
-    });
+    const highlight = item.polarity > 0 ? "-1px -1px 1px" : "1px 1px 1px";
+    const shade = item.polarity > 0 ? "2px 3px 3px" : "-2px -3px 3px";
     const revealEase = "power2.out";
     const settleEase = "sine.out";
     const settleDuration = 2.2 + Math.random() * 0.85;
@@ -339,8 +266,7 @@ function triggerEmboss(x, y, force = 1, mode = "hover") {
           y: -lift,
           scale: spread,
           opacity,
-          filter: activeFilter,
-          ...(config.recolor ? { fill: config.activeFill } : {}),
+          filter: `drop-shadow(${highlight} rgba(255, 255, 255, 0.92)) drop-shadow(${shade} rgba(104, 110, 108, 0.42))`,
           duration: 0.22,
           ease: revealEase,
         },
@@ -364,8 +290,7 @@ function triggerEmboss(x, y, force = 1, mode = "hover") {
           y: 0,
           scale: 1,
           opacity: restOpacity,
-          filter: item.restFilter,
-          ...(config.recolor ? { fill: "#f0f0f0" } : {}),
+          filter: "drop-shadow(0 0 0 rgba(255, 255, 255, 0)) drop-shadow(0 0 0 rgba(132, 138, 136, 0))",
           duration: settleDuration,
           ease: settleEase,
         },
