@@ -67,37 +67,22 @@ const performanceTuning = {
 
 const embossTierConfig = {
   weak: {
-    restOpacity: 0.14,
-    restFill: "#f0f0f0",
     activeFill: "#2b2825",
-    motionScale: 0.2,
-    scaleAmount: 0,
+    recolor: true,
     restShadow: { offsetScale: 0, blurScale: 0, highlightAlpha: 0, shadeAlpha: 0 },
     activeShadow: { offsetScale: 0, blurScale: 0, highlightAlpha: 0, shadeAlpha: 0, holdHighlightAlpha: 0, holdShadeAlpha: 0 },
-    holdOpacity: { base: 0.22, range: 0.2 },
-    triggerOpacity: { base: 0.2, range: 0.3, capHover: 0.5, capAuto: 0.42 },
   },
   middle: {
-    restOpacity: 0.1,
-    restFill: "#f0f0f0",
     activeFill: "#f0f0f0",
-    motionScale: 1,
-    scaleAmount: 1,
+    recolor: false,
     restShadow: { offsetScale: 0, blurScale: 0, highlightAlpha: 0, shadeAlpha: 0 },
     activeShadow: { offsetScale: 1, blurScale: 1, highlightAlpha: 0.92, shadeAlpha: 0.42, holdHighlightAlpha: 0.72, holdShadeAlpha: 0.34 },
-    holdOpacity: { base: 0.38, range: 0.42 },
-    triggerOpacity: { base: 0.34, range: 0.74, capHover: 0.94, capAuto: 0.82 },
   },
   strong: {
-    restOpacity: 0.1,
-    restFill: "#f0f0f0",
     activeFill: "#f0f0f0",
-    motionScale: 1.35,
-    scaleAmount: 1.3,
+    recolor: false,
     restShadow: { offsetScale: 0, blurScale: 0, highlightAlpha: 0, shadeAlpha: 0 },
     activeShadow: { offsetScale: 1.3, blurScale: 0.35, highlightAlpha: 0.97, shadeAlpha: 0.52, holdHighlightAlpha: 0.82, holdShadeAlpha: 0.42 },
-    holdOpacity: { base: 0.42, range: 0.5 },
-    triggerOpacity: { base: 0.38, range: 0.8, capHover: 0.98, capAuto: 0.9 },
   },
 };
 
@@ -219,8 +204,8 @@ function setupEmbossField() {
 
       path.dataset.embossPath = "";
       path.dataset.embossTier = tier;
-      path.style.fill = config.restFill;
-      path.style.opacity = String(config.restOpacity);
+      path.style.fill = "#f0f0f0";
+      path.style.opacity = "0.1";
       path.style.filter = item.restFilter;
 
       if (!embossGrid.has(key)) {
@@ -271,9 +256,8 @@ function holdEmboss(x, y) {
   getEmbossCandidates(x, y, 210, performanceTuning.holdPathLimit).forEach(({ item, distance }) => {
     const { config } = item;
     const intensity = Math.max(0, 1 - distance / 210);
-    const motion = config.motionScale;
-    const lift = (1.2 + intensity * 4.8) * item.polarity * motion;
-    const wave = Math.sin(now * 0.004 + item.jitter) * (0.8 + intensity * 1.6) * motion;
+    const lift = (1.2 + intensity * 4.8) * item.polarity;
+    const wave = Math.sin(now * 0.004 + item.jitter) * (0.8 + intensity * 1.6);
     const filter = buildEmbossFilter(item.polarity, {
       offsetScale: config.activeShadow.offsetScale,
       blurScale: config.activeShadow.blurScale,
@@ -283,15 +267,15 @@ function holdEmboss(x, y) {
     const tween = {
       x: Math.cos(item.jitter) * wave,
       y: -lift + wave * 0.35,
-      scale: 1 + intensity * 0.01 * config.scaleAmount,
-      opacity: config.holdOpacity.base + intensity * config.holdOpacity.range,
+      scale: 1 + intensity * 0.01,
+      opacity: 0.38 + intensity * 0.42,
       filter,
       duration: 0.72,
       ease: "sine.inOut",
       overwrite: "auto",
     };
 
-    if (config.activeFill !== config.restFill) {
+    if (config.recolor) {
       tween.fill = config.activeFill;
     }
 
@@ -330,12 +314,11 @@ function triggerEmboss(x, y, force = 1, mode = "hover") {
     }
 
     item.lastTriggerAt = now;
-    const motion = config.motionScale;
-    const lift = (1.4 + intensity * 5.6) * item.polarity * motion;
-    const drift = Math.sin(now * 0.002 + item.jitter) * 0.7 * motion;
-    const spread = 1 + intensity * 0.018 * config.scaleAmount;
-    const cap = isAuto ? config.triggerOpacity.capAuto : config.triggerOpacity.capHover;
-    const opacity = Math.min(cap, config.triggerOpacity.base + intensity * config.triggerOpacity.range);
+    const lift = (1.4 + intensity * 5.6) * item.polarity;
+    const drift = Math.sin(now * 0.002 + item.jitter) * 0.7;
+    const spread = 1 + intensity * 0.018;
+    const restOpacity = 0.14;
+    const opacity = Math.min(isAuto ? 0.82 : 0.94, 0.34 + intensity * 0.74);
     const activeFilter = buildEmbossFilter(item.polarity, {
       offsetScale: config.activeShadow.offsetScale,
       blurScale: config.activeShadow.blurScale,
@@ -345,7 +328,6 @@ function triggerEmboss(x, y, force = 1, mode = "hover") {
     const revealEase = "power2.out";
     const settleEase = "sine.out";
     const settleDuration = 2.2 + Math.random() * 0.85;
-    const recolor = config.activeFill !== config.restFill;
 
     gsap.killTweensOf(item.path);
     gsap
@@ -353,12 +335,12 @@ function triggerEmboss(x, y, force = 1, mode = "hover") {
       .to(
         item.path,
         {
-          x: Math.cos(item.jitter) * intensity * 1.2 * motion + drift,
+          x: Math.cos(item.jitter) * intensity * 1.2 + drift,
           y: -lift,
           scale: spread,
           opacity,
           filter: activeFilter,
-          ...(recolor ? { fill: config.activeFill } : {}),
+          ...(config.recolor ? { fill: config.activeFill } : {}),
           duration: 0.22,
           ease: revealEase,
         },
@@ -381,9 +363,9 @@ function triggerEmboss(x, y, force = 1, mode = "hover") {
           x: 0,
           y: 0,
           scale: 1,
-          opacity: config.restOpacity,
+          opacity: restOpacity,
           filter: item.restFilter,
-          ...(recolor ? { fill: config.restFill } : {}),
+          ...(config.recolor ? { fill: "#f0f0f0" } : {}),
           duration: settleDuration,
           ease: settleEase,
         },
