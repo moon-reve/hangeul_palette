@@ -53,7 +53,7 @@ const washPalette = [
   [239, 221, 166],
   [208, 186, 226],
 ];
-const embossViewBox = { width: 1717.96, height: 984.27 };
+const embossViewBox = { width: 1920, height: 1080 };
 const embossVisualScale = 1;
 const embossCellSize = 120;
 const embossGrid = new Map();
@@ -1189,50 +1189,103 @@ document.addEventListener("visibilitychange", () => {
 const heartSection = document.querySelector(".section-heart");
 const heartPhotoCarousel = document.querySelector(".heart-photo-carousel");
 const heartPhotoPanels = Array.from(document.querySelectorAll(".heart-photo-panel"));
-const heartTimeline = window.gsap
-  ? gsap
-      .timeline({ paused: true })
-      .to(heartSection, { "--heart-copy-opacity": 0, duration: 0.16, ease: "none" }, 0.05)
-      .to(heartSection, { "--heart-photo-opacity": 1, duration: 0.1, ease: "none" }, 0)
-  : null;
+let heartLastActiveIndex = -1;
+const heartScrollState = {
+  target: 0,
+  current: 0,
+  frame: null,
+};
 
-function updateHeartSection() {
+function startHeartSmoothing() {
+  if (heartScrollState.frame) {
+    return;
+  }
+
+  const tick = () => {
+    heartScrollState.current += (heartScrollState.target - heartScrollState.current) * 0.06;
+    renderHeartProgress(heartScrollState.current);
+
+    if (Math.abs(heartScrollState.target - heartScrollState.current) < 0.0004) {
+      heartScrollState.current = heartScrollState.target;
+      renderHeartProgress(heartScrollState.current);
+      heartScrollState.frame = null;
+      return;
+    }
+
+    heartScrollState.frame = requestAnimationFrame(tick);
+  };
+
+  heartScrollState.frame = requestAnimationFrame(tick);
+}
+
+function setHeartTargetProgress(progress, immediate = false) {
+  heartScrollState.target = Math.min(1, Math.max(0, progress));
+
+  if (immediate) {
+    heartScrollState.current = heartScrollState.target;
+    renderHeartProgress(heartScrollState.current);
+    return;
+  }
+
+  startHeartSmoothing();
+}
+
+function renderHeartProgress(progress) {
   if (!heartSection || !heartPhotoCarousel) {
     return;
   }
 
-  const sectionStart = heartSection.offsetTop;
-  const sectionEnd = sectionStart + heartSection.offsetHeight - window.innerHeight;
-  const scrollRange = Math.max(1, sectionEnd - sectionStart);
-  const currentScroll = window.scrollY || window.pageYOffset;
-  const progress = Math.min(1, Math.max(0, (currentScroll - sectionStart) / scrollRange));
   const introEnd = 0.14;
   const photoProgress = Math.min(1, Math.max(0, (progress - introEnd) / (1 - introEnd)));
   const copyFade = 1 - Math.min(1, Math.max(0, (progress - 0.05) / 0.11));
   const activeIndex = Math.min(4, Math.max(0, Math.round(photoProgress * 4)));
-  const firstPanel = heartPhotoPanels[0];
-  const panelWidth = firstPanel?.getBoundingClientRect().width || 1;
-  const gap = parseFloat(getComputedStyle(heartPhotoCarousel).columnGap) || 0;
-  const panelStep = panelWidth + gap;
-  const trackX = panelWidth / 2 + photoProgress * panelStep * 4;
+  const panelRoles = [
+    { width: 392, height: 1374, y: 0, scale: 0.82 },
+    { width: 486, height: 1704, y: 0, scale: 0.88 },
+    { width: 486, height: 3107, y: 0, scale: 0.94 },
+  ];
+  const viewportScale = Math.min(1, Math.max(0.58, window.innerHeight / 1121));
+  const gap = 50;
+  const panelWidths = heartPhotoPanels.map((_, index) => {
+    const relativeIndex = Math.min(2, Math.abs(index - activeIndex));
+    return panelRoles[relativeIndex].width * viewportScale;
+  });
+  const panelPositions = [];
+  let cursorX = 0;
 
-  heartSection.classList.toggle("is-pinned", currentScroll >= sectionStart && currentScroll <= sectionEnd);
-  heartSection.classList.toggle("is-ended", currentScroll > sectionEnd);
+  panelWidths.forEach((width, index) => {
+    panelPositions[index] = cursorX + width / 2;
+    cursorX += width + gap;
+  });
 
-  if (heartTimeline) {
-    heartTimeline.progress(progress);
-  } else {
-    heartSection.style.setProperty("--heart-copy-opacity", copyFade.toFixed(3));
-    heartSection.style.setProperty("--heart-photo-opacity", "1");
-  }
+  const activeCenter = panelPositions[activeIndex] || 0;
+  const nextIndex = Math.min(4, activeIndex + 1);
+  const nextCenter = panelPositions[nextIndex] || activeCenter;
+  const segmentProgress = Math.min(1, Math.max(0, photoProgress * 4 - activeIndex));
+  const trackX = activeCenter + (nextCenter - activeCenter) * segmentProgress;
 
+  heartSection.style.setProperty("--heart-copy-opacity", copyFade.toFixed(3));
+  heartSection.style.setProperty("--heart-photo-opacity", "1");
   heartPhotoCarousel.style.setProperty("--heart-track-offset", `${-trackX}px`);
 
+  const activeIndexChanged = activeIndex !== heartLastActiveIndex;
+  heartLastActiveIndex = activeIndex;
+
   heartPhotoPanels.forEach((panel, index) => {
-    const panelCenter = window.innerWidth / 2 + index * panelStep + panelWidth / 2 - trackX;
+    const relativeIndex = Math.min(2, Math.abs(index - activeIndex));
+    const role = panelRoles[relativeIndex];
+    const panelCenter = window.innerWidth / 2 + panelPositions[index] - trackX;
     const distanceFromCenter = (panelCenter - window.innerWidth / 2) / window.innerWidth;
     const parallax = Math.max(-1, Math.min(1, distanceFromCenter * 2.6)) * 54;
 
+    if (activeIndexChanged) {
+      const width = role.width * viewportScale;
+      const height = role.height * viewportScale;
+      panel.style.setProperty("--panel-width", `${width.toFixed(2)}px`);
+      panel.style.setProperty("--panel-height", `${height.toFixed(2)}px`);
+    }
+    panel.style.setProperty("--panel-y", `${role.y}px`);
+    panel.style.setProperty("--panel-scale", `${role.scale}`);
     panel.style.setProperty("--panel-parallax", `${parallax.toFixed(2)}px`);
     panel.style.setProperty("--panel-parallax-inner", `${(parallax * -0.45).toFixed(2)}px`);
     panel.classList.toggle("is-active", index === activeIndex);
@@ -1248,5 +1301,60 @@ window.addEventListener("scroll", keepHeroScreenInPlace, { passive: true });
 window.addEventListener("keydown", resetHeroTitleWithKeyboard);
 window.addEventListener("scroll", updateHeartSection, { passive: true });
 window.addEventListener("resize", updateHeartSection);
+function updateHeartSectionFallback() {
+  if (!heartSection) {
+    return;
+  }
+
+  const sectionStart = heartSection.offsetTop;
+  const sectionEnd = sectionStart + heartSection.offsetHeight - window.innerHeight;
+  const scrollRange = Math.max(1, sectionEnd - sectionStart);
+  const currentScroll = window.scrollY || window.pageYOffset;
+  const progress = Math.min(1, Math.max(0, (currentScroll - sectionStart) / scrollRange));
+
+  heartSection.classList.toggle("is-pinned", currentScroll >= sectionStart && currentScroll <= sectionEnd);
+  heartSection.classList.toggle("is-ended", currentScroll > sectionEnd);
+  setHeartTargetProgress(progress);
+}
+
+function setupHeartSection() {
+  if (!heartSection || !heartPhotoCarousel) {
+    return;
+  }
+
+  setHeartTargetProgress(0, true);
+
+  if (window.gsap && window.ScrollTrigger) {
+    gsap.registerPlugin(ScrollTrigger);
+
+    const heartScrollTimeline = gsap.timeline({
+      scrollTrigger: {
+        trigger: heartSection,
+        start: "top top",
+        end: () => `+=${heartSection.offsetHeight - window.innerHeight}`,
+        scrub: true,
+        pin: ".heart-sticky",
+        pinSpacing: false,
+        anticipatePin: 1,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => setHeartTargetProgress(self.progress),
+      },
+    });
+
+    heartScrollTimeline.to({}, { duration: 1 });
+
+    window.addEventListener("resize", () => {
+      const trigger = heartScrollTimeline.scrollTrigger;
+      setHeartTargetProgress(trigger ? trigger.progress : 0, true);
+    });
+    return;
+  }
+
+  updateHeartSectionFallback();
+  window.addEventListener("scroll", updateHeartSectionFallback, { passive: true });
+  window.addEventListener("resize", updateHeartSectionFallback);
+}
+
+setupHeartSection();
 
 animationFrame = requestAnimationFrame(renderMotion);
