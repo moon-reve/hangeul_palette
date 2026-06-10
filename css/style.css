@@ -563,7 +563,7 @@
       }
 
       .heart-sticky {
-        position: absolute;
+        position: relative;
         left: 0;
         top: 0;
         width: 100%;
@@ -590,7 +590,7 @@
 
       .heart-label {
         position: absolute;
-        z-index: 20;
+        z-index: 200;
         left: 84.17vw;
         top: 9.37vh;
         margin: 0;
@@ -610,9 +610,9 @@
       .heart-room {
         position: absolute;
         inset: 0;
-        z-index: 1;
+        z-index: 100;
         overflow: hidden;
-        background: #141414;
+        background: transparent;
         pointer-events: none;
       }
 
@@ -621,79 +621,28 @@
         inset: 0;
       }
 
-      .heart-room-panel,
       .heart-room-ellipse {
         position: absolute;
         display: block;
       }
 
-      .heart-room-panel {
-        z-index: 1;
-        border-radius: 1px;
-        background:
-          linear-gradient(rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.48)),
-          #555;
-        filter: blur(3px);
-        opacity: 1;
-        box-shadow:
-          inset 0 0 72px rgba(0, 0, 0, 0.92),
-          0 0 48px rgba(0, 0, 0, 0.9);
-      }
-
-      .heart-room-panel-far-left {
-        left: -2.2vw;
-        top: 28vh;
-        width: 13vw;
-        height: 24vh;
-      }
-
-      .heart-room-panel-left {
-        left: 13.5vw;
-        top: 27vh;
-        width: 18vw;
-        height: 25vh;
-      }
-
-      .heart-room-panel-center-left {
-        left: 50%;
-        top: 50%;
-        width: clamp(220px, 20.42vw, 392px);
-        height: clamp(124px, 11.2vw, 215px);
-        opacity: 0;
-        transform: translate(-50%, -50%);
-      }
-
-      .heart-room-panel-right {
-        right: 13.5vw;
-        top: 27vh;
-        width: 18vw;
-        height: 25vh;
-      }
-
-      .heart-room-panel-far-right {
-        right: -2.2vw;
-        top: 28vh;
-        width: 13vw;
-        height: 24vh;
-      }
-
       .heart-room-ellipse {
-        z-index: 3;
+        z-index: 10;
         left: 50%;
         width: 165vw;
-        height: 62vh;
+        height: 70vh;
         border-radius: 50%;
-        background: radial-gradient(ellipse at center, rgba(20, 20, 20, 0.98) 0 36%, rgba(20, 20, 20, 0.92) 49%, rgba(20, 20, 20, 0) 73%);
-        filter: blur(24px);
+        background: radial-gradient(ellipse at center, rgba(20, 20, 20, 0.98) 0 90%, rgba(20, 20, 20, 0.92) 95%, rgba(20, 20, 20, 0) 100%);
+        filter: blur(50px);
         transform: translateX(-50%);
       }
 
       .heart-room-ellipse-top {
-        top: -20vh;
+        top: -30vh;
       }
 
       .heart-room-ellipse-bottom {
-        bottom: -28vh;
+        bottom: -30vh;
       }
 
       .heart-photo-stage {
@@ -710,17 +659,16 @@
         top: 50%;
         display: flex;
         align-items: center;
-        gap: clamp(56px, 10vw, 192px);
+        gap: 50px;
         width: max-content;
         transform: translate3d(var(--heart-track-offset), -50%, 0);
-        transition: transform 80ms linear;
         will-change: transform;
       }
 
       .heart-photo-panel {
         position: relative;
-        width: clamp(220px, 19vw, 365px);
-        height: clamp(124px, 10.7vw, 205px);
+        width: var(--panel-width, 588px);
+        height: var(--panel-height, 969px);
         flex: 0 0 auto;
         display: grid;
         place-items: center;
@@ -736,21 +684,17 @@
         font-size: clamp(12px, 0.84vw, 16px);
         filter: brightness(0.42) blur(2.2px);
         opacity: 0.68;
-        transform: scale(0.92);
+        transform: translateY(var(--panel-y, 0)) scale(var(--panel-scale, 1));
         box-shadow:
           inset 0 0 78px rgba(0, 0, 0, 0.9),
           0 0 52px rgba(0, 0, 0, 0.86);
-        transition:
-          filter 180ms ease,
-          opacity 180ms ease,
-          transform 120ms linear;
         will-change: transform, filter, opacity;
       }
 
       .heart-photo-panel.is-active {
         filter: brightness(0.56) blur(1px);
         opacity: 0.82;
-        transform: scale(1);
+        transform: translateY(var(--panel-y, 0)) scale(var(--panel-scale, 1));
       }
 
       .heart-photo-panel::before {
@@ -782,9 +726,43 @@
         z-index: 3;
       }
 
+      .heart-photo-panel-first {
+        background: #f4f4f4;
+      }
+
+      .heart-photo-panel-first.is-active {
+        filter: none;
+        opacity: 1;
+      }
+
+      .heart-photo-panel-first::before,
+      .heart-photo-panel-first::after {
+        display: none;
+      }
+
+      .heart-copy-text {
+        position: relative;
+        z-index: 3;
+        margin: 0;
+        color: #1a1a1a;
+        font-family:
+          Pretendard,
+          "Noto Sans KR",
+          sans-serif;
+        font-size: clamp(18px, 1.875vw, 36px);
+        font-weight: 300;
+        line-height: 1.25;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .heart-copy-text strong {
+        font-weight: 700;
+      }
+
       .heart-copy-card {
         position: absolute;
-        z-index: 12;
+        z-index: 14;
         left: 50%;
         top: 50%;
         display: grid;
@@ -960,20 +938,20 @@
 
         .heart-photo-carousel,
         .heart-copy-card {
-          width: 58vw;
-          height: 32vw;
+          width: clamp(180px, 58vw, 260px);
+          height: clamp(110px, 32vw, 150px);
         }
 
         .heart-photo-carousel {
-          gap: 24vw;
+          gap: 50px;
           width: max-content;
           height: auto;
           transform: translate3d(var(--heart-track-offset), -50%, 0);
         }
 
         .heart-photo-panel {
-          width: 58vw;
-          height: 32vw;
+          width: var(--panel-width, 330px);
+          height: var(--panel-height, 540px);
         }
 
         .heart-copy-card p {
