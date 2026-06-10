@@ -32,7 +32,7 @@ const washPalette = [
   [239, 221, 166],
   [208, 186, 226],
 ];
-const embossViewBox = { width: 1717.96, height: 984.27 };
+const embossViewBox = { width: 1920, height: 1080 };
 const embossVisualScale = 1;
 const embossCellSize = 120;
 const embossGrid = new Map();
