@@ -31,10 +31,13 @@
       <p class="hero-label label-left">국립한글박물관</p>
       <h1 class="hero-title">
         <span class="title-line">
-          <span class="title-strong">한글의</span>
-          <span class="title-strong"> 시작</span>은
+          <span class="title-strong">
+            <span class="title-char" style="--char-delay: 0ms">한</span><span class="title-char" style="--char-delay: 72ms">글</span><span class="title-char" style="--char-delay: 144ms">의</span>
+          </span><span class="title-char" style="--char-delay: 216ms">&nbsp;</span><span class="title-strong"><span class="title-char" style="--char-delay: 288ms">시</span><span class="title-char" style="--char-delay: 360ms">작</span></span><span class="title-char" style="--char-delay: 432ms">은</span>
         </span>
-        <span class="title-line">글자가 아니었습니다.</span>
+        <span class="title-line">
+          <span class="title-char" style="--char-delay: 504ms">글</span><span class="title-char" style="--char-delay: 576ms">자</span><span class="title-char" style="--char-delay: 648ms">가</span><span class="title-char" style="--char-delay: 720ms">&nbsp;</span><span class="title-char" style="--char-delay: 792ms">아</span><span class="title-char" style="--char-delay: 864ms">니</span><span class="title-char" style="--char-delay: 936ms">었</span><span class="title-char" style="--char-delay: 1008ms">습</span><span class="title-char" style="--char-delay: 1080ms">니</span><span class="title-char" style="--char-delay: 1152ms">다</span><span class="title-char" style="--char-delay: 1224ms">.</span>
+        </span>
       </h1>
       <p class="hero-label label-scroll">아래로 내려보기</p>
       <div class="letter-cloud" aria-hidden="true"></div>
@@ -362,15 +365,19 @@
         const isAuto = mode === "auto";
 
         washMarks.push({
-          x: x + (Math.random() - 0.5) * (isHold ? 18 : isLead ? 12 : 30),
-          y: y + (Math.random() - 0.5) * (isHold ? 18 : isLead ? 12 : 30),
-          radius: (isLead ? 28 : isAuto ? 46 : 42) + Math.random() * (isLead ? 42 : 74) + force * (isLead ? 18 : 28),
-          grow: (isLead ? 0.12 : 0.2) + Math.random() * (isLead ? 0.28 : 0.46),
+          x: x + (Math.random() - 0.5) * (isHold ? 18 : isLead ? 12 : isAuto ? 10 : 30),
+          y: y + (Math.random() - 0.5) * (isHold ? 18 : isLead ? 12 : isAuto ? 10 : 30),
+          radius:
+            (isLead ? 28 : isAuto ? 72 : 42) +
+            Math.random() * (isLead ? 42 : isAuto ? 118 : 74) +
+            force * (isLead ? 18 : isAuto ? 36 : 28),
+          grow: (isLead ? 0.12 : isAuto ? 0.16 : 0.2) + Math.random() * (isLead ? 0.28 : isAuto ? 0.28 : 0.46),
           life: 1,
           wobble: Math.random() * Math.PI * 2,
           color,
-          alpha: isHold ? 0.04 : isLead ? 0.055 : isAuto ? 0.058 : 0.075,
+          alpha: isHold ? 0.04 : isLead ? 0.055 : isAuto ? 0.045 : 0.075,
           type: "wash",
+          mode,
         });
 
         if (washMarks.length > performanceTuning.maxWashMarks) {
@@ -389,12 +396,12 @@
 
       function addWashStroke(fromX, fromY, toX, toY, force = 0.7, mode = "auto") {
         const distance = Math.hypot(toX - fromX, toY - fromY);
-        const steps = Math.max(2, Math.min(7, Math.ceil(distance / 86)));
+        const steps = Math.max(3, Math.min(mode === "auto" ? 12 : 7, Math.ceil(distance / (mode === "auto" ? 48 : 86))));
 
         for (let index = 1; index <= steps; index += 1) {
           const progress = index / steps;
           const ease = progress * progress * (3 - 2 * progress);
-          const wave = Math.sin((progress + performance.now() * 0.00018) * Math.PI * 2) * 18;
+          const wave = Math.sin((progress + performance.now() * 0.00018) * Math.PI * 2) * (mode === "auto" ? 8 : 18);
           const x = fromX + (toX - fromX) * ease;
           const y = fromY + (toY - fromY) * ease + wave;
 
@@ -441,7 +448,8 @@
         for (let index = washMarks.length - 1; index >= 0; index -= 1) {
           const mark = washMarks[index];
           const isInk = mark.type === "ink";
-          mark.life -= isInk ? 0.006 : 0.0088;
+          const isAuto = mark.mode === "auto";
+          mark.life -= isInk ? 0.006 : isAuto ? 0.0054 : 0.0088;
           mark.radius += mark.grow;
           mark.wobble += (isInk ? 0.028 : 0.014) + (1 - mark.life) * 0.006;
           mark.x += Math.sin(mark.wobble) * (isInk ? 0.42 : 0.12);
@@ -505,8 +513,8 @@
       }
 
       function retargetAutoSweep(now, rect) {
-        const burst = Math.random() > 0.64;
-        const pause = !burst && Math.random() > 0.68;
+        const drift = Math.random() > 0.58;
+        const pause = !drift && Math.random() > 0.68;
         const marginX = rect.width * 0.08;
         const marginY = rect.height * 0.18;
         const previousTargetX = autoSweep.targetX;
@@ -519,9 +527,9 @@
           autoSweep.targetX = rect.width - autoSweep.targetX;
         }
 
-        autoSweep.speed = pause ? 0.035 + Math.random() * 0.035 : burst ? 0.28 + Math.random() * 0.18 : 0.09 + Math.random() * 0.11;
-        autoSweep.force = burst ? 0.7 + Math.random() * 0.08 : pause ? 0.48 + Math.random() * 0.08 : 0.58 + Math.random() * 0.08;
-        autoSweep.nextShiftAt = now + (burst ? 360 + Math.random() * 620 : pause ? 900 + Math.random() * 1100 : 620 + Math.random() * 980);
+        autoSweep.speed = pause ? 0.024 + Math.random() * 0.026 : drift ? 0.072 + Math.random() * 0.052 : 0.048 + Math.random() * 0.04;
+        autoSweep.force = pause ? 0.44 + Math.random() * 0.06 : drift ? 0.6 + Math.random() * 0.08 : 0.54 + Math.random() * 0.07;
+        autoSweep.nextShiftAt = now + (pause ? 1500 + Math.random() * 1400 : drift ? 1250 + Math.random() * 1300 : 1100 + Math.random() * 1200);
       }
 
       function updateAmbientMotion(now) {
@@ -552,13 +560,14 @@
 
         if (autoSweep.active) {
           hero.classList.add("is-revealing");
-          const autoWeight = idleFor > 2500 ? 0.94 : 0.26;
+          const autoBlend = Math.min(1, Math.max(0, (idleFor - 1000) / 2600));
+          const autoWeight = 0.26 + autoBlend * autoBlend * (3 - 2 * autoBlend) * 0.68;
           pointer.x = userPointer.x * (1 - autoWeight) + autoSweep.x * autoWeight;
           pointer.y = userPointer.y * (1 - autoWeight) + autoSweep.y * autoWeight;
 
           if (now > autoSweep.nextMarkAt) {
             addWashStroke(autoSweep.prevX, autoSweep.prevY, autoSweep.x, autoSweep.y, autoSweep.force, "auto");
-            autoSweep.nextMarkAt = now + (autoSweep.speed > 0.24 ? 38 + Math.random() * 30 : 66 + Math.random() * 70);
+            autoSweep.nextMarkAt = now + (34 + Math.random() * 34);
           }
         }
 
