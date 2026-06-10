@@ -118,6 +118,23 @@
           100% 100%;
       }
 
+      .section {
+        position: relative;
+        width: 100%;
+      }
+
+      .section-placeholder {
+        min-height: 100vh;
+        min-height: 100svh;
+        background: var(--paper-bg);
+      }
+
+      .site-footer {
+        min-height: 32vh;
+        background: var(--ink);
+        color: var(--paper-bg);
+      }
+
       .hero::before {
         position: absolute;
         inset: 0;
@@ -522,7 +539,8 @@
         <feDisplacementMap in="SourceGraphic" in2="noise" scale="7" xChannelSelector="R" yChannelSelector="G" />
       </filter>
     </svg>
-    <main class="hero" aria-label="국립한글박물관 히어로">
+    <main>
+      <section id="hero" class="section section-hero hero" aria-label="국립한글박물관 히어로">
       <canvas class="color-wash" aria-hidden="true"></canvas>
       <div class="emboss-stage" aria-hidden="true">
         <object class="emboss-object" data="./assets/emboss/hangeul-field.svg" type="image/svg+xml"></object>
@@ -540,7 +558,17 @@
       <div class="letter-cloud" aria-hidden="true"></div>
       <p class="hero-label label-bottom semibold">국립한글박물관</p>
       <div class="loading-ring" aria-hidden="true"></div>
+      </section>
+
+      <section id="king-people" class="section section-placeholder section-king-people" aria-label="왕과 백성"></section>
+      <section id="sound" class="section section-placeholder section-sound" aria-label="소리"></section>
+      <section id="heart" class="section section-placeholder section-heart" aria-label="마음"></section>
+      <section id="record" class="section section-placeholder section-record" aria-label="기록"></section>
+      <section id="past" class="section section-placeholder section-past" aria-label="과거"></section>
+      <section id="world" class="section section-placeholder section-world" aria-label="세계"></section>
+      <section id="closing" class="section section-placeholder section-closing" aria-label="마무리"></section>
     </main>
+    <footer id="footer" class="site-footer" aria-label="푸터"></footer>
     <div class="cursor-ring" aria-hidden="true"></div>
     <div class="cursor-dot" aria-hidden="true"></div>
     <script>
