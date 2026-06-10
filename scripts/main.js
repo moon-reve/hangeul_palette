@@ -1029,7 +1029,7 @@ function updateAmbientMotion(now) {
 
     if (now > autoSweep.nextMarkAt) {
       addWashStroke(autoSweep.prevX, autoSweep.prevY, autoSweep.x, autoSweep.y, autoSweep.force, "auto");
-      autoSweep.nextMarkAt = now + (34 + Math.random() * 34);
+      autoSweep.nextMarkAt = now + 3000;
     }
   }
 
