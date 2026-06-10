@@ -304,6 +304,11 @@ function updateVocalSceneProgress(progress) {
     vocalDot.setAttribute("cx", point.x.toFixed(2));
     vocalDot.setAttribute("cy", point.y.toFixed(2));
     vocalDot.style.setProperty("--vocal-dot-opacity", smoothProgress(vocalSceneProgress, 0.28, 0.64).toFixed(3));
+
+    if (vocalHotspots.lip) {
+      vocalHotspots.lip.setAttribute("cx", point.x.toFixed(2));
+      vocalHotspots.lip.setAttribute("cy", point.y.toFixed(2));
+    }
   }
 
   setVocalHotspot(vocalHotspots.throat, smoothProgress(vocalSceneProgress, 0.38, 0.48) * (1 - smoothProgress(vocalSceneProgress, 0.56, 0.66)));
@@ -337,7 +342,7 @@ function updateVocalSceneProgress(progress) {
 
   if (vocalSymbols.more) {
     vocalSymbols.more.style.setProperty("--symbol-opacity", (slideProgress * finalProgress).toFixed(3));
-    vocalSymbols.more.style.setProperty("--symbol-x", `${(24 + slideProgress * 2).toFixed(2)}vw`);
+    vocalSymbols.more.style.setProperty("--symbol-x", `${(28 + slideProgress * 3).toFixed(2)}vw`);
     vocalSymbols.more.style.setProperty("--symbol-y", `${(-0.2 + slideProgress * 0.5).toFixed(2)}vh`);
     vocalSymbols.more.style.setProperty("--symbol-blur", `${(8 - slideProgress * 8).toFixed(2)}px`);
   }
