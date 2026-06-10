@@ -551,6 +551,312 @@
         content: "VIEW";
       }
 
+      .section-heart {
+        position: relative;
+        min-height: 620vh;
+        overflow: visible;
+        --heart-track-offset: 0px;
+        --heart-photo-opacity: 1;
+        --heart-copy-opacity: 1;
+        background: #141414;
+        color: #000;
+      }
+
+      .heart-sticky {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100vh;
+        height: 100svh;
+        overflow: hidden;
+        background: #141414;
+      }
+
+      .section-heart.is-pinned .heart-sticky {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+      }
+
+      .section-heart.is-ended .heart-sticky {
+        position: absolute;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+      }
+
+      .heart-label {
+        position: absolute;
+        z-index: 20;
+        left: 84.17vw;
+        top: 9.37vh;
+        margin: 0;
+        padding: 2px 4px;
+        background: #ececec;
+        color: #707070;
+        font-family:
+          Pretendard,
+          "Noto Sans KR",
+          sans-serif;
+        font-size: clamp(8px, 1.04vw, 20px);
+        font-weight: 600;
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+
+      .heart-room {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        overflow: hidden;
+        background: #141414;
+        pointer-events: none;
+      }
+
+      .heart-room-scene {
+        position: absolute;
+        inset: 0;
+      }
+
+      .heart-room-panel,
+      .heart-room-ellipse {
+        position: absolute;
+        display: block;
+      }
+
+      .heart-room-panel {
+        z-index: 1;
+        border-radius: 1px;
+        background:
+          linear-gradient(rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.48)),
+          #555;
+        filter: blur(3px);
+        opacity: 1;
+        box-shadow:
+          inset 0 0 72px rgba(0, 0, 0, 0.92),
+          0 0 48px rgba(0, 0, 0, 0.9);
+      }
+
+      .heart-room-panel-far-left {
+        left: -2.2vw;
+        top: 28vh;
+        width: 13vw;
+        height: 24vh;
+      }
+
+      .heart-room-panel-left {
+        left: 13.5vw;
+        top: 27vh;
+        width: 18vw;
+        height: 25vh;
+      }
+
+      .heart-room-panel-center-left {
+        left: 50%;
+        top: 50%;
+        width: clamp(220px, 20.42vw, 392px);
+        height: clamp(124px, 11.2vw, 215px);
+        opacity: 0;
+        transform: translate(-50%, -50%);
+      }
+
+      .heart-room-panel-right {
+        right: 13.5vw;
+        top: 27vh;
+        width: 18vw;
+        height: 25vh;
+      }
+
+      .heart-room-panel-far-right {
+        right: -2.2vw;
+        top: 28vh;
+        width: 13vw;
+        height: 24vh;
+      }
+
+      .heart-room-ellipse {
+        z-index: 3;
+        left: 50%;
+        width: 165vw;
+        height: 62vh;
+        border-radius: 50%;
+        background: radial-gradient(ellipse at center, rgba(20, 20, 20, 0.98) 0 36%, rgba(20, 20, 20, 0.92) 49%, rgba(20, 20, 20, 0) 73%);
+        filter: blur(24px);
+        transform: translateX(-50%);
+      }
+
+      .heart-room-ellipse-top {
+        top: -20vh;
+      }
+
+      .heart-room-ellipse-bottom {
+        bottom: -28vh;
+      }
+
+      .heart-photo-stage {
+        position: absolute;
+        inset: 0;
+        z-index: 6;
+        opacity: 1;
+        pointer-events: none;
+      }
+
+      .heart-photo-carousel {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        display: flex;
+        align-items: center;
+        gap: clamp(56px, 10vw, 192px);
+        width: max-content;
+        transform: translate3d(var(--heart-track-offset), -50%, 0);
+        transition: transform 80ms linear;
+        will-change: transform;
+      }
+
+      .heart-photo-panel {
+        position: relative;
+        width: clamp(220px, 19vw, 365px);
+        height: clamp(124px, 10.7vw, 205px);
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background:
+          linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)),
+          #444;
+        color: rgba(255, 255, 255, 0.55);
+        font-family:
+          Pretendard,
+          "Noto Sans KR",
+          sans-serif;
+        font-size: clamp(12px, 0.84vw, 16px);
+        filter: brightness(0.42) blur(2.2px);
+        opacity: 0.68;
+        transform: scale(0.92);
+        box-shadow:
+          inset 0 0 78px rgba(0, 0, 0, 0.9),
+          0 0 52px rgba(0, 0, 0, 0.86);
+        transition:
+          filter 180ms ease,
+          opacity 180ms ease,
+          transform 120ms linear;
+        will-change: transform, filter, opacity;
+      }
+
+      .heart-photo-panel.is-active {
+        filter: brightness(0.56) blur(1px);
+        opacity: 0.82;
+        transform: scale(1);
+      }
+
+      .heart-photo-panel::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        background:
+          linear-gradient(180deg, rgba(0, 0, 0, 0.58), transparent 28%, transparent 68%, rgba(0, 0, 0, 0.64)),
+          linear-gradient(90deg, rgba(0, 0, 0, 0.42), transparent 22%, transparent 78%, rgba(0, 0, 0, 0.42));
+        pointer-events: none;
+      }
+
+      .heart-photo-panel::after {
+        content: "";
+        position: absolute;
+        inset: -8%;
+        z-index: 1;
+        background:
+          radial-gradient(circle at 50% 46%, rgba(130, 130, 130, 0.42), rgba(80, 80, 80, 0.5) 48%, rgba(30, 30, 30, 0.86) 100%),
+          repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 5px);
+        transform: translate3d(var(--panel-parallax-inner), 0, 0) scale(1.08);
+        transition: transform 120ms linear;
+        will-change: transform;
+      }
+
+      .heart-photo-placeholder {
+        position: relative;
+        z-index: 3;
+      }
+
+      .heart-copy-card {
+        position: absolute;
+        z-index: 12;
+        left: 50%;
+        top: 50%;
+        display: grid;
+        place-items: center;
+        width: clamp(220px, 20.42vw, 392px);
+        height: clamp(124px, 11.2vw, 215px);
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.92), rgba(239, 239, 239, 0.88) 48%, rgba(178, 178, 178, 0.72) 100%);
+        box-shadow:
+          inset 0 0 58px rgba(0, 0, 0, 0.48),
+          0 0 38px rgba(255, 255, 255, 0.16),
+          0 48px 120px rgba(0, 0, 0, 0.8);
+        opacity: var(--heart-copy-opacity);
+        transform: translate(-50%, -50%);
+        transition: opacity 120ms linear;
+      }
+
+      .heart-copy-card::before,
+      .heart-copy-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .heart-copy-card::before {
+        background-image:
+          repeating-radial-gradient(circle at 49% 50%, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px),
+          repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0 1px, transparent 1px 4px);
+        opacity: 0.34;
+        mix-blend-mode: multiply;
+      }
+
+      .heart-copy-card::after {
+        background:
+          linear-gradient(180deg, rgba(0, 0, 0, 0.64), transparent 30%, transparent 69%, rgba(0, 0, 0, 0.66)),
+          linear-gradient(90deg, rgba(0, 0, 0, 0.36), transparent 20%, transparent 80%, rgba(0, 0, 0, 0.36));
+      }
+
+      .heart-copy-glow {
+        position: absolute;
+        z-index: 1;
+        left: 50%;
+        top: 50%;
+        width: 89%;
+        height: 70%;
+        border-radius: 50%;
+        background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.96) 0 42%, rgba(255, 255, 255, 0.48) 67%, rgba(255, 255, 255, 0) 100%);
+        filter: blur(18px);
+        transform: translate(-50%, -50%);
+      }
+
+      .heart-copy-card p {
+        position: relative;
+        z-index: 2;
+        margin: 0;
+        font-family:
+          Pretendard,
+          "Noto Sans KR",
+          sans-serif;
+        font-size: clamp(18px, 1.875vw, 36px);
+        font-weight: 300;
+        line-height: 1.25;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .heart-copy-card strong {
+        font-weight: 700;
+      }
+
       @media (pointer: fine) {
         body {
           cursor: none;
@@ -638,5 +944,39 @@
           left: -22vw;
           width: 62vw;
           min-width: 0;
+        }
+
+        .heart-label {
+          left: auto;
+          right: 6vw;
+          top: 6vh;
+        }
+
+        .heart-room-scene {
+          inset: 0;
+          min-width: 0;
+          min-height: 0;
+        }
+
+        .heart-photo-carousel,
+        .heart-copy-card {
+          width: 58vw;
+          height: 32vw;
+        }
+
+        .heart-photo-carousel {
+          gap: 24vw;
+          width: max-content;
+          height: auto;
+          transform: translate3d(var(--heart-track-offset), -50%, 0);
+        }
+
+        .heart-photo-panel {
+          width: 58vw;
+          height: 32vw;
+        }
+
+        .heart-copy-card p {
+          font-size: clamp(16px, 4.6vw, 24px);
         }
       }
