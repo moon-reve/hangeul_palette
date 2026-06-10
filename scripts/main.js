@@ -1,4 +1,25 @@
 const hero = document.querySelector(".hero");
+const heroTitle = document.querySelector(".hero-title");
+const vocalStage = document.querySelector(".vocal-stage");
+const vocalSvg = document.querySelector(".vocal-svg");
+const vocalLines = Array.from(document.querySelectorAll(".vocal-line"));
+const vocalSoundPath = document.querySelector("#vocal-sound-path");
+const vocalDot = document.querySelector(".vocal-dot");
+const vocalHotspots = {
+  throat: document.querySelector(".vocal-hotspot-throat"),
+  tongue: document.querySelector(".vocal-hotspot-tongue"),
+  lip: document.querySelector(".vocal-hotspot-lip"),
+};
+const vocalSymbols = {
+  m: document.querySelector(".vocal-symbol-m"),
+  n: document.querySelector(".vocal-symbol-n"),
+  ng: document.querySelector(".vocal-symbol-ng"),
+  dot: document.querySelector(".vocal-vowel-dot"),
+  eu: document.querySelector(".vocal-vowel-eu"),
+  i: document.querySelector(".vocal-vowel-i"),
+  final: document.querySelector(".vocal-final"),
+  more: document.querySelector(".vocal-more"),
+};
 const turbulence = document.querySelector("#paper-turbulence");
 const washCanvas = document.querySelector(".color-wash");
 const washContext = washCanvas.getContext("2d");
@@ -52,6 +73,17 @@ let lastHoverMarkAt = 0;
 let lastHoverMarkPoint = { x: pointer.x, y: pointer.y };
 let lastCanvasMarkAt = 0;
 let lastCanvasMarkPoint = { x: pointer.x, y: pointer.y };
+let heroTitleState = "initial";
+let heroTitleTransitionTimer = null;
+let heroTitleWheelTimer = null;
+let heroTitleWheelAmount = 0;
+let isHeroTitleTransitioning = false;
+let heroTitleInkProgress = 0;
+let vocalSceneProgress = 0;
+let vocalSceneTargetProgress = 0;
+let vocalSceneFrame = null;
+let vocalLineLengths = [];
+let vocalSoundPathLength = 0;
 
 const performanceTuning = {
   canvasMarkInterval: 12,
@@ -64,6 +96,480 @@ const performanceTuning = {
   maxWashMarks: 64,
   maxInkMarks: 68,
 };
+
+const heroTitleCopy = {
+  initial: [
+    [
+      { text: "한글의", strong: true },
+      { text: " " },
+      { text: "시작", strong: true },
+      { text: "은" },
+    ],
+    [{ text: "글자가 아니었습니다." }],
+  ],
+  scrolled: [
+    [{ text: "사람을 향한" }],
+    [
+      { text: "마음", strong: true },
+      { text: "이었습니다." },
+    ],
+  ],
+  dark: [
+    [
+      { text: "서로의 마음", strong: true },
+      { text: "이 닿지 않던 시대" },
+    ],
+  ],
+  king: [
+    [
+      { text: "왕은 " },
+      { text: "백성의 말", strong: true },
+      { text: "을 들을 수 없었고," },
+    ],
+    [
+      { text: "백성은 " },
+      { text: "자신의 마음", strong: true },
+      { text: "을 전할 수 없었다." },
+    ],
+  ],
+  sejong: [
+    [{ text: "세종은 문자를 만든 것이 아니라" }],
+    [
+      { text: "사람과 " },
+      { text: "사람을 잇는 방법", strong: true },
+      { text: "을 만들고자 했다." },
+    ],
+  ],
+};
+
+const heroTitleOrder = ["initial", "scrolled", "dark", "king", "sejong", "vocal"];
+const heroTitleInkStates = new Set(["dark", "king", "sejong"]);
+const compactHeroTitleStates = new Set(["king", "sejong"]);
+const heroTitleInkAdvance = {
+  dark: 0.5,
+  king: 0.58,
+  sejong: 0.58,
+};
+const heroTitleNextThreshold = {
+  dark: 0.5,
+  king: 0.58,
+  sejong: 0.58,
+};
+
+function createHeroTitleMarkup(lines) {
+  let charIndex = 0;
+
+  return lines
+    .map((line) => {
+      const lineMarkup = line
+        .map((part) => {
+          const chars = Array.from(part.text)
+            .map((char) => {
+              const delay = charIndex * 72;
+              const exitDelay = charIndex * 26;
+              charIndex += 1;
+              const content = char === " " ? "&nbsp;" : char;
+
+              return `<span class="title-char" style="--char-delay: ${delay}ms; --char-exit-delay: ${exitDelay}ms">${content}</span>`;
+            })
+            .join("");
+
+          return part.strong ? `<span class="title-strong">${chars}</span>` : chars;
+        })
+        .join("");
+
+      return `<span class="title-line">${lineMarkup}</span>`;
+    })
+    .join("");
+}
+
+function prepareExistingHeroTitleChars() {
+  if (!heroTitle) {
+    return;
+  }
+
+  heroTitle.querySelectorAll(".title-char").forEach((char, index) => {
+    char.style.setProperty("--char-exit-delay", `${index * 26}ms`);
+  });
+}
+
+function updateHeroTitleInkReveal(progress) {
+  if (!heroTitle) {
+    return;
+  }
+
+  heroTitleInkProgress = Math.min(1, Math.max(0, progress));
+  const chars = Array.from(heroTitle.querySelectorAll(".title-char"));
+  const maxIndex = Math.max(1, chars.length - 1);
+
+  chars.forEach((char, index) => {
+    const wave = index / maxIndex;
+    const isCompactInkTitle = compactHeroTitleStates.has(heroTitleState);
+    const waveDelay = isCompactInkTitle ? 0.08 : 0.14;
+    const revealRange = isCompactInkTitle ? 0.22 : 0.26;
+    const localProgress = Math.min(1, Math.max(0, (heroTitleInkProgress - wave * waveDelay) / revealRange));
+    const eased = localProgress * localProgress * (3 - 2 * localProgress);
+
+    char.style.setProperty("--char-ink", eased.toFixed(3));
+    char.style.setProperty("--char-lift", `${((1 - eased) * 0.12).toFixed(3)}em`);
+    char.style.setProperty("--char-scale", (0.982 + eased * 0.018).toFixed(3));
+    char.style.setProperty("--char-blur", `${(12 - eased * 12).toFixed(2)}px`);
+    char.style.setProperty("--char-contrast", (1 + eased * 0.42).toFixed(3));
+    char.style.setProperty("--char-glow", `${(eased * 11).toFixed(2)}px`);
+    char.style.setProperty("--char-haze", `${(30 - eased * 18).toFixed(2)}px`);
+  });
+}
+
+function clamp01(value) {
+  return Math.min(1, Math.max(0, value));
+}
+
+function smoothProgress(value, start, end) {
+  const progress = clamp01((value - start) / (end - start));
+  return progress * progress * (3 - 2 * progress);
+}
+
+function setVocalSymbol(symbol, progress, start, end, fromX, fromY, toX = 0, toY = 0, scaleFrom = 0.9, scaleTo = 1) {
+  if (!symbol) {
+    return;
+  }
+
+  const eased = smoothProgress(progress, start, end);
+  const x = fromX + (toX - fromX) * eased;
+  const y = fromY + (toY - fromY) * eased;
+  const scale = scaleFrom + (scaleTo - scaleFrom) * eased;
+
+  symbol.style.setProperty("--symbol-opacity", eased.toFixed(3));
+  symbol.style.setProperty("--symbol-x", `${x.toFixed(2)}vw`);
+  symbol.style.setProperty("--symbol-y", `${y.toFixed(2)}vh`);
+  symbol.style.setProperty("--symbol-scale", scale.toFixed(3));
+  symbol.style.setProperty("--symbol-blur", `${(10 - eased * 10).toFixed(2)}px`);
+}
+
+function setVocalHotspot(hotspot, amount) {
+  if (!hotspot) {
+    return;
+  }
+
+  const eased = clamp01(amount);
+
+  hotspot.style.opacity = (eased * 0.86).toFixed(3);
+  hotspot.style.transform = `scale(${(0.8 + eased * 0.36).toFixed(3)})`;
+}
+
+function setupVocalScene() {
+  vocalLineLengths = vocalLines.map((line) => {
+    const length = line.getTotalLength();
+    line.style.strokeDasharray = length;
+    line.style.strokeDashoffset = length;
+    return length;
+  });
+
+  if (vocalSoundPath) {
+    vocalSoundPathLength = vocalSoundPath.getTotalLength();
+  }
+
+  resetVocalSceneProgress(0);
+}
+
+function updateVocalSceneProgress(progress) {
+  if (!vocalStage) {
+    return;
+  }
+
+  vocalSceneProgress = clamp01(progress);
+  const intro = smoothProgress(vocalSceneProgress, 0.02, 0.16);
+  const dotProgress = smoothProgress(vocalSceneProgress, 0.32, 0.62);
+  const finalProgress = smoothProgress(vocalSceneProgress, 0.72, 0.92);
+  const slideProgress = smoothProgress(vocalSceneProgress, 0.74, 1);
+
+  vocalStage.style.setProperty("--vocal-stage-opacity", intro.toFixed(3));
+  vocalStage.style.setProperty("--vocal-stage-blur", `${(18 - intro * 18).toFixed(2)}px`);
+  vocalStage.style.setProperty("--vocal-stage-y", `${(18 - intro * 18).toFixed(2)}px`);
+
+  if (vocalSvg) {
+    vocalSvg.style.setProperty("--vocal-svg-x", `${(-21 * slideProgress).toFixed(2)}vw`);
+    vocalSvg.style.setProperty("--vocal-svg-y", `${(-1.2 * slideProgress).toFixed(2)}vh`);
+    vocalSvg.style.setProperty("--vocal-svg-scale", (1 - slideProgress * 0.04).toFixed(3));
+  }
+
+  vocalLines.forEach((line, index) => {
+    const draw = smoothProgress(vocalSceneProgress, 0.14 + index * 0.055, 0.52 + index * 0.05);
+    line.style.strokeDashoffset = vocalLineLengths[index] * (1 - draw);
+    line.style.opacity = (0.2 + draw * 0.8).toFixed(3);
+  });
+
+  if (vocalDot && vocalSoundPath && vocalSoundPathLength) {
+    const point = vocalSoundPath.getPointAtLength(vocalSoundPathLength * dotProgress);
+    vocalDot.setAttribute("cx", point.x.toFixed(2));
+    vocalDot.setAttribute("cy", point.y.toFixed(2));
+    vocalDot.style.setProperty("--vocal-dot-opacity", smoothProgress(vocalSceneProgress, 0.28, 0.64).toFixed(3));
+  }
+
+  setVocalHotspot(vocalHotspots.throat, smoothProgress(vocalSceneProgress, 0.38, 0.48) * (1 - smoothProgress(vocalSceneProgress, 0.56, 0.66)));
+  setVocalHotspot(vocalHotspots.tongue, smoothProgress(vocalSceneProgress, 0.48, 0.58) * (1 - smoothProgress(vocalSceneProgress, 0.66, 0.74)));
+  setVocalHotspot(vocalHotspots.lip, smoothProgress(vocalSceneProgress, 0.58, 0.68) * (1 - smoothProgress(vocalSceneProgress, 0.72, 0.82)));
+
+  setVocalSymbol(vocalSymbols.ng, vocalSceneProgress, 0.38, 0.54, 6, 15, 6 + (-2 - 6) * finalProgress, 15 + (-1 - 15) * finalProgress);
+  setVocalSymbol(vocalSymbols.n, vocalSceneProgress, 0.48, 0.64, -18, -3, -18 + (-1 + 18) * finalProgress, -3 + (-1 + 3) * finalProgress);
+  setVocalSymbol(vocalSymbols.m, vocalSceneProgress, 0.58, 0.74, 16, -15, 16 + (0 - 16) * finalProgress, -15 + (-1 + 15) * finalProgress);
+  setVocalSymbol(vocalSymbols.dot, vocalSceneProgress, 0.66, 0.82, -7, 12, -7 + (0 + 7) * finalProgress, 12 + (-3 - 12) * finalProgress, 0.78, 1);
+  setVocalSymbol(vocalSymbols.eu, vocalSceneProgress, 0.69, 0.86, 0, 18, 0, 18 + (1 - 18) * finalProgress, 0.78, 1);
+  setVocalSymbol(vocalSymbols.i, vocalSceneProgress, 0.72, 0.9, 9, 10, 9 + (1 - 9) * finalProgress, 10 + (-1 - 10) * finalProgress, 0.78, 1);
+
+  [vocalSymbols.ng, vocalSymbols.n, vocalSymbols.m, vocalSymbols.dot, vocalSymbols.eu, vocalSymbols.i].forEach((symbol) => {
+    if (!symbol) {
+      return;
+    }
+
+    const currentOpacity = parseFloat(symbol.style.getPropertyValue("--symbol-opacity")) || 0;
+    symbol.style.setProperty("--symbol-opacity", (currentOpacity * (1 - finalProgress)).toFixed(3));
+    symbol.style.setProperty("--symbol-blur", `${(finalProgress * 12).toFixed(2)}px`);
+  });
+
+  if (vocalSymbols.final) {
+    vocalSymbols.final.style.setProperty("--symbol-opacity", finalProgress.toFixed(3));
+    vocalSymbols.final.style.setProperty("--symbol-x", `${(-0.5 + slideProgress * 14).toFixed(2)}vw`);
+    vocalSymbols.final.style.setProperty("--symbol-y", `${(-2 + slideProgress * 0.5).toFixed(2)}vh`);
+    vocalSymbols.final.style.setProperty("--symbol-scale", (0.88 + finalProgress * 0.12).toFixed(3));
+    vocalSymbols.final.style.setProperty("--symbol-blur", `${(14 - finalProgress * 14).toFixed(2)}px`);
+  }
+
+  if (vocalSymbols.more) {
+    vocalSymbols.more.style.setProperty("--symbol-opacity", (slideProgress * finalProgress).toFixed(3));
+    vocalSymbols.more.style.setProperty("--symbol-x", `${(24 + slideProgress * 2).toFixed(2)}vw`);
+    vocalSymbols.more.style.setProperty("--symbol-y", `${(-0.2 + slideProgress * 0.5).toFixed(2)}vh`);
+    vocalSymbols.more.style.setProperty("--symbol-blur", `${(8 - slideProgress * 8).toFixed(2)}px`);
+  }
+}
+
+function animateVocalSceneProgress() {
+  const delta = vocalSceneTargetProgress - vocalSceneProgress;
+
+  if (Math.abs(delta) < 0.001) {
+    updateVocalSceneProgress(vocalSceneTargetProgress);
+    vocalSceneFrame = null;
+    return;
+  }
+
+  updateVocalSceneProgress(vocalSceneProgress + delta * 0.16);
+  vocalSceneFrame = requestAnimationFrame(animateVocalSceneProgress);
+}
+
+function setVocalSceneTargetProgress(progress) {
+  vocalSceneTargetProgress = clamp01(progress);
+
+  if (!vocalSceneFrame) {
+    vocalSceneFrame = requestAnimationFrame(animateVocalSceneProgress);
+  }
+}
+
+function resetVocalSceneProgress(progress = 0) {
+  vocalSceneTargetProgress = clamp01(progress);
+
+  if (vocalSceneFrame) {
+    cancelAnimationFrame(vocalSceneFrame);
+    vocalSceneFrame = null;
+  }
+
+  updateVocalSceneProgress(vocalSceneTargetProgress);
+}
+
+function enterVocalScene() {
+  if (!heroTitle || heroTitleState === "vocal") {
+    return;
+  }
+
+  window.clearTimeout(heroTitleTransitionTimer);
+  heroTitleState = "vocal";
+  isHeroTitleTransitioning = true;
+  hero.classList.add("is-dark-scene");
+  heroTitle.classList.remove("is-char-ready", "is-title-visible", "is-title-exiting");
+  heroTitle.classList.add("is-ink-fading");
+  resetVocalSceneProgress(0);
+
+  heroTitleTransitionTimer = window.setTimeout(() => {
+    heroTitle.classList.remove("is-title-king");
+    heroTitle.classList.remove("is-ink-reveal", "is-ink-fading");
+    resetVocalSceneProgress(0);
+    hero.classList.add("is-vocal-scene");
+
+    isHeroTitleTransitioning = false;
+  }, 760);
+}
+
+function setHeroTitleCopy(copyKey, animate = true, options = {}) {
+  if (!heroTitle || heroTitleState === copyKey) {
+    return;
+  }
+
+  window.clearTimeout(heroTitleTransitionTimer);
+  hero.classList.remove("is-vocal-scene");
+  resetVocalSceneProgress(0);
+  const previousState = heroTitleState;
+  const wasInkTitle = heroTitleInkStates.has(previousState);
+  heroTitleState = copyKey;
+  isHeroTitleTransitioning = true;
+
+  if (!heroTitleInkStates.has(copyKey)) {
+    hero.classList.remove("is-dark-scene");
+    heroTitleInkProgress = 0;
+  }
+
+  heroTitle.classList.remove("is-char-ready", "is-title-visible");
+
+  if (wasInkTitle) {
+    heroTitle.classList.add("is-ink-fading");
+  } else {
+    heroTitle.classList.remove("is-ink-reveal", "is-ink-fading");
+    heroTitle.classList.add("is-title-exiting");
+  }
+
+  heroTitleTransitionTimer = window.setTimeout(() => {
+    heroTitle.innerHTML = createHeroTitleMarkup(heroTitleCopy[copyKey]);
+    heroTitle.classList.toggle("is-title-king", compactHeroTitleStates.has(copyKey));
+
+    if (heroTitleInkStates.has(copyKey)) {
+      hero.classList.add("is-dark-scene");
+      heroTitle.classList.remove("is-title-exiting", "is-title-visible", "is-char-ready", "is-ink-fading");
+      heroTitle.classList.add("is-ink-reveal");
+      heroTitleInkProgress = 0;
+      updateHeroTitleInkReveal(options.inkProgress ?? 0.08);
+      isHeroTitleTransitioning = false;
+      return;
+    }
+
+    heroTitle.classList.remove("is-title-exiting", "is-title-visible", "is-ink-reveal", "is-ink-fading");
+
+    if (animate) {
+      heroTitle.classList.add("is-char-ready");
+    } else {
+      heroTitle.classList.add("is-title-visible");
+    }
+
+    isHeroTitleTransitioning = false;
+  }, 1140);
+}
+
+function moveHeroTitleStep(direction) {
+  if (isHeroTitleTransitioning) {
+    return;
+  }
+
+  if (heroTitleState === "vocal") {
+    if (direction > 0) {
+      setVocalSceneTargetProgress(vocalSceneTargetProgress + 0.1);
+      return;
+    }
+
+    if (vocalSceneTargetProgress > 0.12) {
+      setVocalSceneTargetProgress(vocalSceneTargetProgress - 0.12);
+      return;
+    }
+
+    setHeroTitleCopy("sejong", true, { inkProgress: 0.72 });
+    return;
+  }
+
+  if (
+    direction > 0 &&
+    heroTitleNextThreshold[heroTitleState] !== undefined &&
+    heroTitleInkProgress >= heroTitleNextThreshold[heroTitleState]
+  ) {
+    const currentIndex = heroTitleOrder.indexOf(heroTitleState);
+    if (heroTitleOrder[currentIndex + 1] === "vocal") {
+      enterVocalScene();
+      return;
+    }
+
+    setHeroTitleCopy(heroTitleOrder[currentIndex + 1]);
+    return;
+  }
+
+  if (heroTitleInkStates.has(heroTitleState) && direction > 0 && heroTitleInkProgress < 1) {
+    updateHeroTitleInkReveal(heroTitleInkProgress + (heroTitleInkAdvance[heroTitleState] || 0.5));
+    return;
+  }
+
+  if (heroTitleInkStates.has(heroTitleState) && direction < 0 && heroTitleInkProgress > 0.16) {
+    updateHeroTitleInkReveal(heroTitleInkProgress - 0.22);
+    return;
+  }
+
+  const currentIndex = heroTitleOrder.indexOf(heroTitleState);
+  const nextIndex = Math.min(heroTitleOrder.length - 1, Math.max(0, currentIndex + direction));
+
+  const nextState = heroTitleOrder[nextIndex];
+  const returningToInkTitle = direction < 0 && heroTitleInkStates.has(nextState);
+
+  setHeroTitleCopy(nextState, true, returningToInkTitle ? { inkProgress: heroTitleNextThreshold[nextState] ?? 0.72 } : {});
+}
+
+function keepHeroScreenInPlace() {
+  if (!heroTitle) {
+    return;
+  }
+
+  if ((window.scrollY || window.pageYOffset) > 0) {
+    moveHeroTitleStep(1);
+    window.scrollTo(0, 0);
+  }
+}
+
+function resetHeroTitleWithKeyboard(event) {
+  if (event.key === "ArrowDown" || event.key === "PageDown" || event.key === "End" || event.key === " ") {
+    event.preventDefault();
+    moveHeroTitleStep(1);
+  }
+
+  if (event.key === "ArrowUp" || event.key === "PageUp" || event.key === "Home") {
+    event.preventDefault();
+    moveHeroTitleStep(-1);
+  }
+}
+
+function handleHeroTitleWheel(event) {
+  if (!heroTitle) {
+    return;
+  }
+
+  event.preventDefault();
+
+  if (heroTitleState === "vocal") {
+    const nextProgress = vocalSceneTargetProgress + event.deltaY * 0.00058;
+
+    if (event.deltaY < 0 && vocalSceneTargetProgress <= 0.02) {
+      setHeroTitleCopy("sejong");
+      return;
+    }
+
+    setVocalSceneTargetProgress(nextProgress);
+    return;
+  }
+
+  if (heroTitleWheelTimer) {
+    return;
+  }
+
+  const direction = event.deltaY > 0 ? 1 : -1;
+  const wheelThreshold = 360;
+
+  if (Math.sign(heroTitleWheelAmount) !== direction) {
+    heroTitleWheelAmount = 0;
+  }
+
+  heroTitleWheelAmount += event.deltaY;
+
+  if (Math.abs(heroTitleWheelAmount) < wheelThreshold) {
+    return;
+  }
+
+  moveHeroTitleStep(direction);
+  heroTitleWheelAmount = 0;
+  heroTitleWheelTimer = window.setTimeout(() => {
+    heroTitleWheelTimer = null;
+  }, 1680);
+}
 
 function resizeWashCanvas() {
   const rect = hero.getBoundingClientRect();
@@ -734,6 +1240,12 @@ function updateHeartSection() {
 }
 
 updateHeartSection();
+prepareExistingHeroTitleChars();
+setupVocalScene();
+keepHeroScreenInPlace();
+window.addEventListener("wheel", handleHeroTitleWheel, { passive: false });
+window.addEventListener("scroll", keepHeroScreenInPlace, { passive: true });
+window.addEventListener("keydown", resetHeroTitleWithKeyboard);
 window.addEventListener("scroll", updateHeartSection, { passive: true });
 window.addEventListener("resize", updateHeartSection);
 
