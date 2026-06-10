@@ -1201,9 +1201,67 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+const recordStack = document.querySelector(".record-stack");
+const recordBoxes = recordStack ? Array.from(recordStack.querySelectorAll(".record-box")) : [];
+
+if (recordStack && recordBoxes.length) {
+  recordBoxes.forEach((box) => {
+    box.dataset.originalLeft = box.style.left;
+    box.dataset.originalTop = box.style.top;
+    box.dataset.originalHeight = box.style.height;
+
+    box.addEventListener("click", () => {
+      const index = Number(box.dataset.index);
+      const isActive = recordStack.dataset.activeIndex === String(index);
+
+      if (isActive) {
+        delete recordStack.dataset.activeIndex;
+        delete recordStack.dataset.active;
+        recordBoxes.forEach((b) => {
+          b.classList.remove("is-active", "is-pushed-up", "is-pushed-down");
+          b.style.left = b.dataset.originalLeft;
+          b.style.top = b.dataset.originalTop;
+          b.style.height = b.dataset.originalHeight;
+          b.style.transform = "";
+        });
+        return;
+      }
+
+      recordStack.dataset.activeIndex = String(index);
+      recordStack.dataset.active = "true";
+
+      recordBoxes.forEach((b) => {
+        const bIndex = Number(b.dataset.index);
+        b.classList.remove("is-active", "is-pushed-up", "is-pushed-down");
+
+        if (bIndex === index) {
+          b.classList.add("is-active");
+          b.style.left = "50%";
+          b.style.top = "50%";
+          b.style.height = "800px";
+          b.style.transform = "translate(-50%, -50%)";
+        } else if (bIndex < index) {
+          b.classList.add("is-pushed-up");
+          b.style.left = b.dataset.originalLeft;
+          b.style.top = b.dataset.originalTop;
+          b.style.height = b.dataset.originalHeight;
+          b.style.transform = "";
+        } else {
+          b.classList.add("is-pushed-down");
+          b.style.left = b.dataset.originalLeft;
+          b.style.top = b.dataset.originalTop;
+          b.style.height = b.dataset.originalHeight;
+          b.style.transform = "";
+        }
+      });
+    });
+  });
+}
+
 const heartSection = document.querySelector(".section-heart");
 const heartPhotoCarousel = document.querySelector(".heart-photo-carousel");
 const heartPhotoPanels = Array.from(document.querySelectorAll(".heart-photo-panel"));
+const sceneFlicker = document.querySelector(".scene-flicker");
 let heartLastActiveIndex = -1;
 const heartScrollState = {
   target: 0,
@@ -1305,6 +1363,21 @@ function renderHeartProgress(progress) {
     panel.style.setProperty("--panel-parallax-inner", `${(parallax * -0.45).toFixed(2)}px`);
     panel.classList.toggle("is-active", index === activeIndex);
   });
+
+  if (sceneFlicker) {
+    const flickerStart = 0.96;
+
+    if (progress >= flickerStart && progress < 1) {
+      const flickerProgress = (progress - flickerStart) / (1 - flickerStart);
+      const steps = 3;
+      const stepIndex = Math.min(steps - 1, Math.floor(flickerProgress * steps));
+
+      sceneFlicker.style.background = stepIndex % 2 === 0 ? "#000" : "#fff";
+      sceneFlicker.style.opacity = "1";
+    } else {
+      sceneFlicker.style.opacity = "0";
+    }
+  }
 }
 
 updateHeartSection();
