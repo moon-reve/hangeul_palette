@@ -65,6 +65,20 @@ const performanceTuning = {
   maxInkMarks: 68,
 };
 
+const embossTierIntensity = {
+  weak: 0.5,
+  middle: 1,
+  strong: 1.6,
+};
+
+function getEmbossTier(path) {
+  const groupId = path.closest("g[id]")?.getAttribute("id") || "";
+
+  if (groupId.startsWith("weak")) return "weak";
+  if (groupId.startsWith("strong")) return "strong";
+  return "middle";
+}
+
 function resizeWashCanvas() {
   const rect = hero.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -143,6 +157,7 @@ function setupEmbossField() {
         lastTriggerAt: 0,
         polarity: index % 5 === 0 ? -1 : 1,
         jitter: Math.random() * Math.PI * 2,
+        intensityScale: embossTierIntensity[getEmbossTier(path)] ?? 1,
       };
 
       path.dataset.embossPath = "";
@@ -196,7 +211,7 @@ function holdEmboss(x, y) {
   const now = performance.now();
 
   getEmbossCandidates(x, y, 210, performanceTuning.holdPathLimit).forEach(({ item, distance }) => {
-    const intensity = Math.max(0, 1 - distance / 210);
+    const intensity = Math.max(0, 1 - distance / 210) * item.intensityScale;
     const lift = (1.2 + intensity * 4.8) * item.polarity;
     const wave = Math.sin(now * 0.004 + item.jitter) * (0.8 + intensity * 1.6);
     const highlight = item.polarity > 0 ? "-1px -1px 1px" : "1px 1px 1px";
@@ -238,7 +253,7 @@ function triggerEmboss(x, y, force = 1, mode = "hover") {
 
   getEmbossCandidates(x, y, radius, limit).forEach(({ item, distance }) => {
     const isAuto = mode === "auto";
-    const intensity = Math.max(0, 1 - distance / radius) * force;
+    const intensity = Math.max(0, 1 - distance / radius) * force * item.intensityScale;
 
     if (intensity < 0.12 || now - item.lastTriggerAt < (isAuto ? 96 : 230)) {
       return;
