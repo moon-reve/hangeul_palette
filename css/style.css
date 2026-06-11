@@ -1163,12 +1163,8 @@
       }
 
       @media (pointer: fine) {
-        body {
+        .hero {
           cursor: none;
-        }
-
-        .section-record {
-          cursor: auto;
         }
       }
 
