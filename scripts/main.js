@@ -526,15 +526,25 @@ function moveHeroTitleStep(direction) {
 }
 
 function keepHeroScreenInPlace() {
-  if (!heroIntroLocked || !heroTitle) {
+  if (!heroTitle) {
     return;
+  }
+
+  const scrollY = window.scrollY || window.pageYOffset;
+
+  if (!heroIntroLocked) {
+    if (scrollY > 0) {
+      return;
+    }
+
+    heroIntroLocked = true;
   }
 
   if (heroTitleState === "vocal" && vocalSceneTargetProgress >= 1) {
     return;
   }
 
-  if ((window.scrollY || window.pageYOffset) > 0) {
+  if (scrollY > 0) {
     moveHeroTitleStep(1);
     window.scrollTo(0, 0);
   }
