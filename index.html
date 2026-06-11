@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>국립한글박물관 | Hero</title>
     <script src="./assets/vendor/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
     <link rel="stylesheet" href="./css/style.css" />
   </head>
   <body>
@@ -26,7 +25,7 @@
       <section id="hero" class="section section-hero hero" aria-label="국립한글박물관 히어로">
       <canvas class="color-wash" aria-hidden="true"></canvas>
       <div class="emboss-stage" aria-hidden="true">
-        <object class="emboss-object" data="./assets/emboss/hero_bg_5_group.svg" type="image/svg+xml"></object>
+        <object class="emboss-object" data="./assets/emboss/hangeul-field.svg" type="image/svg+xml"></object>
       </div>
       <p class="hero-label label-top semibold">펼쳐보기</p>
       <p class="hero-label label-left">국립한글박물관</p>
@@ -85,16 +84,19 @@
           <p class="heart-label">시간의 연결</p>
           <div class="heart-room" aria-hidden="true">
             <div class="heart-room-scene">
+              <span class="heart-room-panel heart-room-panel-far-left"></span>
+              <span class="heart-room-panel heart-room-panel-left"></span>
+              <span class="heart-room-panel heart-room-panel-center-left"></span>
+              <span class="heart-room-panel heart-room-panel-right"></span>
+              <span class="heart-room-panel heart-room-panel-far-right"></span>
               <span class="heart-room-ellipse heart-room-ellipse-top"></span>
+              <span class="heart-room-ellipse heart-room-ellipse-bottom"></span>
             </div>
           </div>
           <div class="heart-photo-stage" aria-hidden="true">
             <div class="heart-photo-carousel">
-              <div class="heart-photo-panel heart-photo-panel-first" style="--panel-index: 0; --panel-parallax: 0px">
-                <p class="heart-copy-text">
-                  마음은 한글로<br />
-                  <strong>기록</strong> 되었습니다.
-                </p>
+              <div class="heart-photo-panel" style="--panel-index: 0; --panel-parallax: 0px">
+                <span class="heart-photo-placeholder">사진 1</span>
               </div>
               <div class="heart-photo-panel" style="--panel-index: 1; --panel-parallax: 0px">
                 <span class="heart-photo-placeholder">사진 2</span>
@@ -110,29 +112,16 @@
               </div>
             </div>
           </div>
-        </div>
-      </section>
-      <section id="record" class="section section-record" aria-label="기록">
-        <div class="record-stage">
-          <div class="record-stack" aria-hidden="true">
-            <div class="record-box" data-index="0" style="left: 31.46%; top: 16.93%; width: 37.03%; height: 19.38%"></div>
-            <div class="record-box" data-index="1" style="left: 30.47%; top: 19.52%; width: 39.01%; height: 19.38%"></div>
-            <div class="record-box" data-index="2" style="left: 29.74%; top: 22.93%; width: 40.47%; height: 19.38%"></div>
-            <div class="record-box" data-index="3" style="left: 28.59%; top: 26.82%; width: 42.76%; height: 19.38%"></div>
-            <div class="record-box" data-index="4" style="left: 27.40%; top: 30.18%; width: 45.10%; height: 19.38%"></div>
-            <div class="record-box" data-index="5" style="left: 26.72%; top: 34.23%; width: 46.46%; height: 19.38%"></div>
-            <div class="record-box" data-index="6" style="left: 26.20%; top: 38.24%; width: 47.55%; height: 19.38%"></div>
-            <div class="record-box" data-index="7" style="left: 25.52%; top: 42.62%; width: 48.91%; height: 19.38%"></div>
-            <div class="record-box" data-index="8" style="left: 24.84%; top: 47.12%; width: 50.21%; height: 19.38%"></div>
-            <div class="record-box" data-index="9" style="left: 23.70%; top: 51.77%; width: 52.50%; height: 19.38%"></div>
-            <div class="record-box" data-index="10" style="left: 23.02%; top: 56.11%; width: 53.85%; height: 19.78%"></div>
+          <div class="heart-copy-card">
+            <span class="heart-copy-glow" aria-hidden="true"></span>
+            <p>
+              마음은 한글로<br />
+              <strong>기록</strong> 되었습니다.
+            </p>
           </div>
-          <p class="record-label">시간의 연결</p>
-          <p class="record-copy">
-            기록은 <strong>시간을 넘어</strong> 이어졌다
-          </p>
         </div>
       </section>
+      <section id="record" class="section section-placeholder section-record" aria-label="기록"></section>
       <section id="past" class="section section-placeholder section-past" aria-label="과거"></section>
       <section id="connection" class="section section-placeholder section-connection" aria-label="연결"></section>
       <section id="closing" class="section section-placeholder section-closing" aria-label="마무리"></section>
@@ -140,7 +129,6 @@
     <footer id="footer" class="site-footer" aria-label="푸터"></footer>
     <div class="cursor-ring" aria-hidden="true"></div>
     <div class="cursor-dot" aria-hidden="true"></div>
-    <div class="scene-flicker" aria-hidden="true"></div>
     <script src="./scripts/main.js"></script>
   </body>
 </html>

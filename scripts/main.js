@@ -34,8 +34,8 @@ const userPointer = { x: pointer.x, y: pointer.y };
 const autoSweep = {
   x: pointer.x,
   y: pointer.y,
-  strokeStartX: pointer.x,
-  strokeStartY: pointer.y,
+  prevX: pointer.x,
+  prevY: pointer.y,
   active: false,
   phase: Math.random() * Math.PI * 2,
   nextMarkAt: 0,
@@ -53,7 +53,7 @@ const washPalette = [
   [239, 221, 166],
   [208, 186, 226],
 ];
-const embossViewBox = { width: 1920, height: 1080 };
+const embossViewBox = { width: 1717.96, height: 984.27 };
 const embossVisualScale = 1;
 const embossCellSize = 120;
 const embossGrid = new Map();
@@ -96,20 +96,6 @@ const performanceTuning = {
   maxWashMarks: 64,
   maxInkMarks: 68,
 };
-
-const embossTierIntensity = {
-  weak: 0.5,
-  middle: 1,
-  strong: 1.6,
-};
-
-function getEmbossTier(path) {
-  const groupId = path.closest("g[id]")?.getAttribute("id") || "";
-
-  if (groupId.startsWith("weak")) return "weak";
-  if (groupId.startsWith("strong")) return "strong";
-  return "middle";
-}
 
 const heroTitleCopy = {
   initial: [
@@ -668,7 +654,6 @@ function setupEmbossField() {
         lastTriggerAt: 0,
         polarity: index % 5 === 0 ? -1 : 1,
         jitter: Math.random() * Math.PI * 2,
-        intensityScale: embossTierIntensity[getEmbossTier(path)] ?? 1,
       };
 
       path.dataset.embossPath = "";
@@ -722,34 +707,22 @@ function holdEmboss(x, y) {
   const now = performance.now();
 
   getEmbossCandidates(x, y, 210, performanceTuning.holdPathLimit).forEach(({ item, distance }) => {
-    const intensity = Math.max(0, 1 - distance / 210) * item.intensityScale;
+    const intensity = Math.max(0, 1 - distance / 210);
     const lift = (1.2 + intensity * 4.8) * item.polarity;
     const wave = Math.sin(now * 0.004 + item.jitter) * (0.8 + intensity * 1.6);
     const highlight = item.polarity > 0 ? "-1px -1px 1px" : "1px 1px 1px";
     const shade = item.polarity > 0 ? "2px 3px 3px" : "-2px -3px 3px";
-    const restOpacity = 0.14;
 
-    gsap.killTweensOf(item.path);
-    gsap
-      .timeline({ defaults: { overwrite: "auto" } })
-      .to(item.path, {
-        x: Math.cos(item.jitter) * wave,
-        y: -lift + wave * 0.35,
-        scale: 1 + intensity * 0.01,
-        opacity: 0.38 + intensity * 0.42,
-        filter: `drop-shadow(${highlight} rgba(255, 255, 255, 0.72)) drop-shadow(${shade} rgba(104, 110, 108, 0.34))`,
-        duration: 0.72,
-        ease: "sine.inOut",
-      })
-      .to(item.path, {
-        x: 0,
-        y: 0,
-        scale: 1,
-        opacity: restOpacity,
-        filter: "drop-shadow(0 0 0 rgba(255, 255, 255, 0)) drop-shadow(0 0 0 rgba(132, 138, 136, 0))",
-        duration: 1.6,
-        ease: "sine.out",
-      });
+    gsap.to(item.path, {
+      x: Math.cos(item.jitter) * wave,
+      y: -lift + wave * 0.35,
+      scale: 1 + intensity * 0.01,
+      opacity: 0.38 + intensity * 0.42,
+      filter: `drop-shadow(${highlight} rgba(255, 255, 255, 0.72)) drop-shadow(${shade} rgba(104, 110, 108, 0.34))`,
+      duration: 0.72,
+      ease: "sine.inOut",
+      overwrite: "auto",
+    });
   });
 }
 
@@ -776,7 +749,7 @@ function triggerEmboss(x, y, force = 1, mode = "hover") {
 
   getEmbossCandidates(x, y, radius, limit).forEach(({ item, distance }) => {
     const isAuto = mode === "auto";
-    const intensity = Math.max(0, 1 - distance / radius) * force * item.intensityScale;
+    const intensity = Math.max(0, 1 - distance / radius) * force;
 
     if (intensity < 0.12 || now - item.lastTriggerAt < (isAuto ? 96 : 230)) {
       return;
@@ -876,7 +849,6 @@ function addWashMark(x, y, force = 1, mode = "hover") {
 function addWashStroke(fromX, fromY, toX, toY, force = 0.7, mode = "auto") {
   const distance = Math.hypot(toX - fromX, toY - fromY);
   const steps = Math.max(3, Math.min(mode === "auto" ? 12 : 7, Math.ceil(distance / (mode === "auto" ? 48 : 86))));
-  const strokeDuration = mode === "auto" ? 760 : 0;
 
   for (let index = 1; index <= steps; index += 1) {
     const progress = index / steps;
@@ -884,14 +856,8 @@ function addWashStroke(fromX, fromY, toX, toY, force = 0.7, mode = "auto") {
     const wave = Math.sin((progress + performance.now() * 0.00018) * Math.PI * 2) * (mode === "auto" ? 8 : 18);
     const x = fromX + (toX - fromX) * ease;
     const y = fromY + (toY - fromY) * ease + wave;
-    const markForce = force * (0.82 + progress * 0.18);
-    const delay = strokeDuration * progress;
 
-    if (delay > 0) {
-      window.setTimeout(() => addWashMark(x, y, markForce, mode), delay);
-    } else {
-      addWashMark(x, y, markForce, mode);
-    }
+    addWashMark(x, y, force * (0.82 + progress * 0.18), mode);
   }
 }
 
@@ -991,7 +957,6 @@ function setPointer(clientX, clientY) {
   lastHoldPoint.x = pointer.x;
   lastHoldPoint.y = pointer.y;
   lastInputAt = performance.now();
-  autoSweep.active = false;
 }
 
 function setCursor(clientX, clientY) {
@@ -1002,8 +967,8 @@ function setCursor(clientX, clientY) {
 function retargetAutoSweep(now, rect) {
   const drift = Math.random() > 0.58;
   const pause = !drift && Math.random() > 0.68;
-  const marginX = 0;
-  const marginY = 0;
+  const marginX = rect.width * 0.08;
+  const marginY = rect.height * 0.18;
   const previousTargetX = autoSweep.targetX;
   const previousTargetY = autoSweep.targetY;
 
@@ -1025,8 +990,8 @@ function updateAmbientMotion(now) {
 
   if (idleFor > 1000 && !autoSweep.active) {
     autoSweep.active = true;
-    autoSweep.strokeStartX = autoSweep.x;
-    autoSweep.strokeStartY = autoSweep.y;
+    autoSweep.prevX = autoSweep.x;
+    autoSweep.prevY = autoSweep.y;
     autoSweep.nextMarkAt = now;
     autoSweep.nextShiftAt = now;
   }
@@ -1040,6 +1005,8 @@ function updateAmbientMotion(now) {
   const nextAutoX = autoSweep.targetX + driftX;
   const nextAutoY = autoSweep.targetY + driftY;
 
+  autoSweep.prevX += (autoSweep.x - autoSweep.prevX) * 0.62;
+  autoSweep.prevY += (autoSweep.y - autoSweep.prevY) * 0.62;
   autoSweep.x += (nextAutoX - autoSweep.x) * autoSweep.speed;
   autoSweep.y += (nextAutoY - autoSweep.y) * autoSweep.speed;
 
@@ -1051,10 +1018,8 @@ function updateAmbientMotion(now) {
     pointer.y = userPointer.y * (1 - autoWeight) + autoSweep.y * autoWeight;
 
     if (now > autoSweep.nextMarkAt) {
-      addWashStroke(autoSweep.strokeStartX, autoSweep.strokeStartY, autoSweep.x, autoSweep.y, autoSweep.force, "auto");
-      autoSweep.strokeStartX = autoSweep.x;
-      autoSweep.strokeStartY = autoSweep.y;
-      autoSweep.nextMarkAt = now + 3000;
+      addWashStroke(autoSweep.prevX, autoSweep.prevY, autoSweep.x, autoSweep.y, autoSweep.force, "auto");
+      autoSweep.nextMarkAt = now + (34 + Math.random() * 34);
     }
   }
 
@@ -1226,183 +1191,57 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-const recordStack = document.querySelector(".record-stack");
-const recordBoxes = recordStack ? Array.from(recordStack.querySelectorAll(".record-box")) : [];
-
-if (recordStack && recordBoxes.length) {
-  recordBoxes.forEach((box) => {
-    box.dataset.originalLeft = box.style.left;
-    box.dataset.originalTop = box.style.top;
-    box.dataset.originalHeight = box.style.height;
-
-    box.addEventListener("click", () => {
-      const index = Number(box.dataset.index);
-      const isActive = recordStack.dataset.activeIndex === String(index);
-
-      if (isActive) {
-        delete recordStack.dataset.activeIndex;
-        delete recordStack.dataset.active;
-        recordBoxes.forEach((b) => {
-          b.classList.remove("is-active", "is-pushed-up", "is-pushed-down");
-          b.style.left = b.dataset.originalLeft;
-          b.style.top = b.dataset.originalTop;
-          b.style.height = b.dataset.originalHeight;
-          b.style.transform = "";
-        });
-        return;
-      }
-
-      recordStack.dataset.activeIndex = String(index);
-      recordStack.dataset.active = "true";
-
-      recordBoxes.forEach((b) => {
-        const bIndex = Number(b.dataset.index);
-        b.classList.remove("is-active", "is-pushed-up", "is-pushed-down");
-
-        if (bIndex === index) {
-          b.classList.add("is-active");
-          b.style.left = "50%";
-          b.style.top = "50%";
-          b.style.height = "800px";
-          b.style.transform = "translate(-50%, -50%)";
-        } else if (bIndex < index) {
-          b.classList.add("is-pushed-up");
-          b.style.left = b.dataset.originalLeft;
-          b.style.top = b.dataset.originalTop;
-          b.style.height = b.dataset.originalHeight;
-          b.style.transform = "";
-        } else {
-          b.classList.add("is-pushed-down");
-          b.style.left = b.dataset.originalLeft;
-          b.style.top = b.dataset.originalTop;
-          b.style.height = b.dataset.originalHeight;
-          b.style.transform = "";
-        }
-      });
-    });
-  });
-}
-
 const heartSection = document.querySelector(".section-heart");
 const heartPhotoCarousel = document.querySelector(".heart-photo-carousel");
 const heartPhotoPanels = Array.from(document.querySelectorAll(".heart-photo-panel"));
-const sceneFlicker = document.querySelector(".scene-flicker");
-let heartLastActiveIndex = -1;
-const heartScrollState = {
-  target: 0,
-  current: 0,
-  frame: null,
-};
+const heartTimeline = window.gsap
+  ? gsap
+      .timeline({ paused: true })
+      .to(heartSection, { "--heart-copy-opacity": 0, duration: 0.16, ease: "none" }, 0.05)
+      .to(heartSection, { "--heart-photo-opacity": 1, duration: 0.1, ease: "none" }, 0)
+  : null;
 
-function startHeartSmoothing() {
-  if (heartScrollState.frame) {
-    return;
-  }
-
-  const tick = () => {
-    heartScrollState.current += (heartScrollState.target - heartScrollState.current) * 0.06;
-    renderHeartProgress(heartScrollState.current);
-
-    if (Math.abs(heartScrollState.target - heartScrollState.current) < 0.0004) {
-      heartScrollState.current = heartScrollState.target;
-      renderHeartProgress(heartScrollState.current);
-      heartScrollState.frame = null;
-      return;
-    }
-
-    heartScrollState.frame = requestAnimationFrame(tick);
-  };
-
-  heartScrollState.frame = requestAnimationFrame(tick);
-}
-
-function setHeartTargetProgress(progress, immediate = false) {
-  heartScrollState.target = Math.min(1, Math.max(0, progress));
-
-  if (immediate) {
-    heartScrollState.current = heartScrollState.target;
-    renderHeartProgress(heartScrollState.current);
-    return;
-  }
-
-  startHeartSmoothing();
-}
-
-function renderHeartProgress(progress) {
+function updateHeartSection() {
   if (!heartSection || !heartPhotoCarousel) {
     return;
   }
 
+  const sectionStart = heartSection.offsetTop;
+  const sectionEnd = sectionStart + heartSection.offsetHeight - window.innerHeight;
+  const scrollRange = Math.max(1, sectionEnd - sectionStart);
+  const currentScroll = window.scrollY || window.pageYOffset;
+  const progress = Math.min(1, Math.max(0, (currentScroll - sectionStart) / scrollRange));
   const introEnd = 0.14;
   const photoProgress = Math.min(1, Math.max(0, (progress - introEnd) / (1 - introEnd)));
   const copyFade = 1 - Math.min(1, Math.max(0, (progress - 0.05) / 0.11));
   const activeIndex = Math.min(4, Math.max(0, Math.round(photoProgress * 4)));
-  const panelRoles = [
-    { width: 392, height: 1374, y: 0, scale: 0.82 },
-    { width: 486, height: 1704, y: 0, scale: 0.88 },
-    { width: 486, height: 3107, y: 0, scale: 0.94 },
-  ];
-  const viewportScale = Math.min(1, Math.max(0.58, window.innerHeight / 1121));
-  const gap = 50;
-  const panelWidths = heartPhotoPanels.map((_, index) => {
-    const relativeIndex = Math.min(2, Math.abs(index - activeIndex));
-    return panelRoles[relativeIndex].width * viewportScale;
-  });
-  const panelPositions = [];
-  let cursorX = 0;
+  const firstPanel = heartPhotoPanels[0];
+  const panelWidth = firstPanel?.getBoundingClientRect().width || 1;
+  const gap = parseFloat(getComputedStyle(heartPhotoCarousel).columnGap) || 0;
+  const panelStep = panelWidth + gap;
+  const trackX = panelWidth / 2 + photoProgress * panelStep * 4;
 
-  panelWidths.forEach((width, index) => {
-    panelPositions[index] = cursorX + width / 2;
-    cursorX += width + gap;
-  });
+  heartSection.classList.toggle("is-pinned", currentScroll >= sectionStart && currentScroll <= sectionEnd);
+  heartSection.classList.toggle("is-ended", currentScroll > sectionEnd);
 
-  const activeCenter = panelPositions[activeIndex] || 0;
-  const nextIndex = Math.min(4, activeIndex + 1);
-  const nextCenter = panelPositions[nextIndex] || activeCenter;
-  const segmentProgress = Math.min(1, Math.max(0, photoProgress * 4 - activeIndex));
-  const trackX = activeCenter + (nextCenter - activeCenter) * segmentProgress;
+  if (heartTimeline) {
+    heartTimeline.progress(progress);
+  } else {
+    heartSection.style.setProperty("--heart-copy-opacity", copyFade.toFixed(3));
+    heartSection.style.setProperty("--heart-photo-opacity", "1");
+  }
 
-  heartSection.style.setProperty("--heart-copy-opacity", copyFade.toFixed(3));
-  heartSection.style.setProperty("--heart-photo-opacity", "1");
   heartPhotoCarousel.style.setProperty("--heart-track-offset", `${-trackX}px`);
 
-  const activeIndexChanged = activeIndex !== heartLastActiveIndex;
-  heartLastActiveIndex = activeIndex;
-
   heartPhotoPanels.forEach((panel, index) => {
-    const relativeIndex = Math.min(2, Math.abs(index - activeIndex));
-    const role = panelRoles[relativeIndex];
-    const panelCenter = window.innerWidth / 2 + panelPositions[index] - trackX;
+    const panelCenter = window.innerWidth / 2 + index * panelStep + panelWidth / 2 - trackX;
     const distanceFromCenter = (panelCenter - window.innerWidth / 2) / window.innerWidth;
     const parallax = Math.max(-1, Math.min(1, distanceFromCenter * 2.6)) * 54;
 
-    if (activeIndexChanged) {
-      const width = role.width * viewportScale;
-      const height = role.height * viewportScale;
-      panel.style.setProperty("--panel-width", `${width.toFixed(2)}px`);
-      panel.style.setProperty("--panel-height", `${height.toFixed(2)}px`);
-    }
-    panel.style.setProperty("--panel-y", `${role.y}px`);
-    panel.style.setProperty("--panel-scale", `${role.scale}`);
     panel.style.setProperty("--panel-parallax", `${parallax.toFixed(2)}px`);
     panel.style.setProperty("--panel-parallax-inner", `${(parallax * -0.45).toFixed(2)}px`);
     panel.classList.toggle("is-active", index === activeIndex);
   });
-
-  if (sceneFlicker) {
-    const flickerStart = 0.96;
-
-    if (progress >= flickerStart && progress < 1) {
-      const flickerProgress = (progress - flickerStart) / (1 - flickerStart);
-      const steps = 3;
-      const stepIndex = Math.min(steps - 1, Math.floor(flickerProgress * steps));
-
-      sceneFlicker.style.background = stepIndex % 2 === 0 ? "#000" : "#fff";
-      sceneFlicker.style.opacity = "1";
-    } else {
-      sceneFlicker.style.opacity = "0";
-    }
-  }
 }
 
 updateHeartSection();
@@ -1414,60 +1253,5 @@ window.addEventListener("scroll", keepHeroScreenInPlace, { passive: true });
 window.addEventListener("keydown", resetHeroTitleWithKeyboard);
 window.addEventListener("scroll", updateHeartSection, { passive: true });
 window.addEventListener("resize", updateHeartSection);
-function updateHeartSectionFallback() {
-  if (!heartSection) {
-    return;
-  }
-
-  const sectionStart = heartSection.offsetTop;
-  const sectionEnd = sectionStart + heartSection.offsetHeight - window.innerHeight;
-  const scrollRange = Math.max(1, sectionEnd - sectionStart);
-  const currentScroll = window.scrollY || window.pageYOffset;
-  const progress = Math.min(1, Math.max(0, (currentScroll - sectionStart) / scrollRange));
-
-  heartSection.classList.toggle("is-pinned", currentScroll >= sectionStart && currentScroll <= sectionEnd);
-  heartSection.classList.toggle("is-ended", currentScroll > sectionEnd);
-  setHeartTargetProgress(progress);
-}
-
-function setupHeartSection() {
-  if (!heartSection || !heartPhotoCarousel) {
-    return;
-  }
-
-  setHeartTargetProgress(0, true);
-
-  if (window.gsap && window.ScrollTrigger) {
-    gsap.registerPlugin(ScrollTrigger);
-
-    const heartScrollTimeline = gsap.timeline({
-      scrollTrigger: {
-        trigger: heartSection,
-        start: "top top",
-        end: () => `+=${heartSection.offsetHeight - window.innerHeight}`,
-        scrub: true,
-        pin: ".heart-sticky",
-        pinSpacing: false,
-        anticipatePin: 1,
-        invalidateOnRefresh: true,
-        onUpdate: (self) => setHeartTargetProgress(self.progress),
-      },
-    });
-
-    heartScrollTimeline.to({}, { duration: 1 });
-
-    window.addEventListener("resize", () => {
-      const trigger = heartScrollTimeline.scrollTrigger;
-      setHeartTargetProgress(trigger ? trigger.progress : 0, true);
-    });
-    return;
-  }
-
-  updateHeartSectionFallback();
-  window.addEventListener("scroll", updateHeartSectionFallback, { passive: true });
-  window.addEventListener("resize", updateHeartSectionFallback);
-}
-
-setupHeartSection();
 
 animationFrame = requestAnimationFrame(renderMotion);
