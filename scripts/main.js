@@ -1287,12 +1287,56 @@ const heartSection = document.querySelector(".section-heart");
 const heartPhotoCarousel = document.querySelector(".heart-photo-carousel");
 const heartPhotoPanels = Array.from(document.querySelectorAll(".heart-photo-panel"));
 const sceneFlicker = document.querySelector(".scene-flicker");
-let heartLastActiveIndex = -1;
 const heartScrollState = {
   target: 0,
   current: 0,
   frame: null,
 };
+
+const HEART_PANEL_POSITIONS = [
+  { point: -2, x: -77, z: 40, scale: 1.9, rotate: 54, blur: 13, brightness: 0.38, opacity: 0.52, edge: 0.98 },
+  { point: -1, x: -37, z: -70, scale: 1.48, rotate: 27, blur: 6.5, brightness: 0.54, opacity: 0.72, edge: 0.9 },
+  { point: 0, x: 0, z: -320, scale: 0.78, rotate: 0, blur: 0, brightness: 0.94, opacity: 1, edge: 0.45 },
+  { point: 1, x: 37, z: -70, scale: 1.48, rotate: -27, blur: 6.5, brightness: 0.54, opacity: 0.72, edge: 0.9 },
+  { point: 2, x: 77, z: 40, scale: 1.9, rotate: -54, blur: 13, brightness: 0.38, opacity: 0.52, edge: 0.98 },
+];
+
+function interpolateHeartRole(relative) {
+  const clampedRelative = Math.min(2, Math.max(-2, relative));
+
+  for (let i = 0; i < HEART_PANEL_POSITIONS.length - 1; i += 1) {
+    const start = HEART_PANEL_POSITIONS[i];
+    const end = HEART_PANEL_POSITIONS[i + 1];
+
+    if (clampedRelative >= start.point && clampedRelative <= end.point) {
+      const t = (clampedRelative - start.point) / (end.point - start.point);
+      const easedT = t * t * (3 - 2 * t);
+
+      return Object.keys(start).reduce((role, key) => {
+        role[key] = start[key] + (end[key] - start[key]) * easedT;
+        return role;
+      }, {});
+    }
+  }
+
+  return clampedRelative < 0 ? HEART_PANEL_POSITIONS[0] : HEART_PANEL_POSITIONS[HEART_PANEL_POSITIONS.length - 1];
+}
+
+function getHeartCircularRelative(index, virtualIndex, panelCount) {
+  const halfCount = panelCount / 2;
+  let relative = index - virtualIndex;
+  relative = ((relative + halfCount) % panelCount + panelCount) % panelCount - halfCount;
+
+  if (relative < -2) {
+    relative += panelCount;
+  }
+
+  if (relative > 2) {
+    relative -= panelCount;
+  }
+
+  return relative;
+}
 
 function startHeartSmoothing() {
   if (heartScrollState.frame) {
@@ -1333,59 +1377,54 @@ function renderHeartProgress(progress) {
     return;
   }
 
+  const panelCount = heartPhotoPanels.length;
+
+  if (!panelCount) {
+    return;
+  }
+
   const introEnd = 0.14;
   const photoProgress = Math.min(1, Math.max(0, (progress - introEnd) / (1 - introEnd)));
   const copyFade = 1 - Math.min(1, Math.max(0, (progress - 0.05) / 0.11));
-  const activeIndex = Math.min(4, Math.max(0, Math.round(photoProgress * 4)));
-  const panelRoles = [
-    { width: 392, height: 1374, y: 0, scale: 0.82 },
-    { width: 486, height: 1704, y: 0, scale: 0.88 },
-    { width: 486, height: 3107, y: 0, scale: 0.94 },
-  ];
-  const viewportScale = Math.min(1, Math.max(0.58, window.innerHeight / 1121));
-  const gap = 50;
-  const panelWidths = heartPhotoPanels.map((_, index) => {
-    const relativeIndex = Math.min(2, Math.abs(index - activeIndex));
-    return panelRoles[relativeIndex].width * viewportScale;
-  });
-  const panelPositions = [];
-  let cursorX = 0;
-
-  panelWidths.forEach((width, index) => {
-    panelPositions[index] = cursorX + width / 2;
-    cursorX += width + gap;
-  });
-
-  const activeCenter = panelPositions[activeIndex] || 0;
-  const nextIndex = Math.min(4, activeIndex + 1);
-  const nextCenter = panelPositions[nextIndex] || activeCenter;
-  const segmentProgress = Math.min(1, Math.max(0, photoProgress * 4 - activeIndex));
-  const trackX = activeCenter + (nextCenter - activeCenter) * segmentProgress;
+  const rawVirtualIndex = photoProgress * (panelCount - 1);
+  const nearestIndex = Math.round(rawVirtualIndex);
+  const snapDistance = Math.abs(rawVirtualIndex - nearestIndex);
+  const snapRange = 0.28;
+  const snapPull = Math.pow(1 - Math.min(1, snapDistance / snapRange), 2) * 0.16;
+  const virtualIndex = rawVirtualIndex + (nearestIndex - rawVirtualIndex) * snapPull;
+  const activeIndex = Math.min(panelCount - 1, Math.max(0, Math.round(virtualIndex)));
+  const centerWidth = Math.min(window.innerWidth * 0.26, Math.max(220, window.innerWidth * 0.2));
+  const centerHeight = centerWidth * 0.5625;
+  const sideWidth = Math.min(window.innerWidth * 0.45, Math.max(360, window.innerWidth * 0.34));
+  const sideHeight = sideWidth * 0.5625;
+  const farWidth = Math.min(window.innerWidth * 0.54, Math.max(420, window.innerWidth * 0.42));
+  const farHeight = farWidth * 0.5625;
 
   heartSection.style.setProperty("--heart-copy-opacity", copyFade.toFixed(3));
   heartSection.style.setProperty("--heart-photo-opacity", "1");
-  heartPhotoCarousel.style.setProperty("--heart-track-offset", `${-trackX}px`);
-
-  const activeIndexChanged = activeIndex !== heartLastActiveIndex;
-  heartLastActiveIndex = activeIndex;
 
   heartPhotoPanels.forEach((panel, index) => {
-    const relativeIndex = Math.min(2, Math.abs(index - activeIndex));
-    const role = panelRoles[relativeIndex];
-    const panelCenter = window.innerWidth / 2 + panelPositions[index] - trackX;
-    const distanceFromCenter = (panelCenter - window.innerWidth / 2) / window.innerWidth;
-    const parallax = Math.max(-1, Math.min(1, distanceFromCenter * 2.6)) * 54;
+    const relative = getHeartCircularRelative(index, virtualIndex, panelCount);
+    const role = interpolateHeartRole(relative);
+    const distance = Math.min(2, Math.abs(relative));
+    const width = centerWidth + (sideWidth - centerWidth) * Math.min(1, distance);
+    const height = centerHeight + (sideHeight - centerHeight) * Math.min(1, distance);
+    const farMix = Math.max(0, distance - 1);
+    const finalWidth = width + (farWidth - sideWidth) * farMix;
+    const finalHeight = height + (farHeight - sideHeight) * farMix;
 
-    if (activeIndexChanged) {
-      const width = role.width * viewportScale;
-      const height = role.height * viewportScale;
-      panel.style.setProperty("--panel-width", `${width.toFixed(2)}px`);
-      panel.style.setProperty("--panel-height", `${height.toFixed(2)}px`);
-    }
-    panel.style.setProperty("--panel-y", `${role.y}px`);
-    panel.style.setProperty("--panel-scale", `${role.scale}`);
-    panel.style.setProperty("--panel-parallax", `${parallax.toFixed(2)}px`);
-    panel.style.setProperty("--panel-parallax-inner", `${(parallax * -0.45).toFixed(2)}px`);
+    panel.style.setProperty("--panel-width", `${finalWidth.toFixed(2)}px`);
+    panel.style.setProperty("--panel-height", `${finalHeight.toFixed(2)}px`);
+    panel.style.setProperty("--panel-x", `${role.x.toFixed(2)}vw`);
+    panel.style.setProperty("--panel-y", `${(Math.abs(relative) * 8).toFixed(2)}px`);
+    panel.style.setProperty("--panel-z", `${role.z.toFixed(2)}px`);
+    panel.style.setProperty("--panel-scale", role.scale.toFixed(3));
+    panel.style.setProperty("--panel-rotate", `${role.rotate.toFixed(2)}deg`);
+    panel.style.setProperty("--panel-blur", `${role.blur.toFixed(2)}px`);
+    panel.style.setProperty("--panel-brightness", role.brightness.toFixed(3));
+    panel.style.setProperty("--panel-opacity", role.opacity.toFixed(3));
+    panel.style.setProperty("--panel-edge-opacity", role.edge.toFixed(3));
+    panel.style.zIndex = String(10 - Math.round(distance * 2));
     panel.classList.toggle("is-active", index === activeIndex);
   });
 
