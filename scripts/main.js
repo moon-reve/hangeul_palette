@@ -722,17 +722,29 @@ function holdEmboss(x, y) {
     const wave = Math.sin(now * 0.004 + item.jitter) * (0.8 + intensity * 1.6);
     const highlight = item.polarity > 0 ? "-1px -1px 1px" : "1px 1px 1px";
     const shade = item.polarity > 0 ? "2px 3px 3px" : "-2px -3px 3px";
+    const restOpacity = 0.14;
 
-    gsap.to(item.path, {
-      x: Math.cos(item.jitter) * wave,
-      y: -lift + wave * 0.35,
-      scale: 1 + intensity * 0.01,
-      opacity: 0.38 + intensity * 0.42,
-      filter: `drop-shadow(${highlight} rgba(255, 255, 255, 0.72)) drop-shadow(${shade} rgba(104, 110, 108, 0.34))`,
-      duration: 0.72,
-      ease: "sine.inOut",
-      overwrite: "auto",
-    });
+    gsap.killTweensOf(item.path);
+    gsap
+      .timeline({ defaults: { overwrite: "auto" } })
+      .to(item.path, {
+        x: Math.cos(item.jitter) * wave,
+        y: -lift + wave * 0.35,
+        scale: 1 + intensity * 0.01,
+        opacity: 0.38 + intensity * 0.42,
+        filter: `drop-shadow(${highlight} rgba(255, 255, 255, 0.72)) drop-shadow(${shade} rgba(104, 110, 108, 0.34))`,
+        duration: 0.72,
+        ease: "sine.inOut",
+      })
+      .to(item.path, {
+        x: 0,
+        y: 0,
+        scale: 1,
+        opacity: restOpacity,
+        filter: "drop-shadow(0 0 0 rgba(255, 255, 255, 0)) drop-shadow(0 0 0 rgba(132, 138, 136, 0))",
+        duration: 1.6,
+        ease: "sine.out",
+      });
   });
 }
 
