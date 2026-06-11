@@ -997,8 +997,8 @@ function setCursor(clientX, clientY) {
 function retargetAutoSweep(now, rect) {
   const drift = Math.random() > 0.58;
   const pause = !drift && Math.random() > 0.68;
-  const marginX = rect.width * 0.08;
-  const marginY = rect.height * 0.18;
+  const marginX = 0;
+  const marginY = 0;
   const previousTargetX = autoSweep.targetX;
   const previousTargetY = autoSweep.targetY;
 
