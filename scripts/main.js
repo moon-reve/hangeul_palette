@@ -84,6 +84,7 @@ let vocalSceneTargetProgress = 0;
 let vocalSceneFrame = null;
 let vocalLineLengths = [];
 let vocalSoundPathLength = 0;
+let heroIntroLocked = true;
 
 const performanceTuning = {
   canvasMarkInterval: 12,
@@ -525,7 +526,7 @@ function moveHeroTitleStep(direction) {
 }
 
 function keepHeroScreenInPlace() {
-  if (!heroTitle) {
+  if (!heroIntroLocked || !heroTitle) {
     return;
   }
 
@@ -540,6 +541,10 @@ function keepHeroScreenInPlace() {
 }
 
 function resetHeroTitleWithKeyboard(event) {
+  if (!heroIntroLocked) {
+    return;
+  }
+
   if (event.key === "ArrowDown" || event.key === "PageDown" || event.key === "End" || event.key === " ") {
     event.preventDefault();
     moveHeroTitleStep(1);
@@ -552,12 +557,13 @@ function resetHeroTitleWithKeyboard(event) {
 }
 
 function handleHeroTitleWheel(event) {
-  if (!heroTitle) {
+  if (!heroIntroLocked || !heroTitle) {
     return;
   }
 
   if (heroTitleState === "vocal") {
     if (event.deltaY > 0 && vocalSceneTargetProgress >= 1) {
+      heroIntroLocked = false;
       return;
     }
 
