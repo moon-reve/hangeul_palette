@@ -571,6 +571,10 @@ function handleHeroTitleWheel(event) {
     return;
   }
 
+  if ((window.scrollY || window.pageYOffset) > 1) {
+    return;
+  }
+
   if (heroTitleState === "vocal") {
     if (event.deltaY > 0 && vocalSceneTargetProgress >= 1) {
       heroIntroLocked = false;
@@ -1313,12 +1317,46 @@ const heartSection = document.querySelector(".section-heart");
 const heartPhotoCarousel = document.querySelector(".heart-photo-carousel");
 const heartPhotoPanels = Array.from(document.querySelectorAll(".heart-photo-panel"));
 const sceneFlicker = document.querySelector(".scene-flicker");
-let heartLastActiveIndex = -1;
 const heartScrollState = {
   target: 0,
   current: 0,
   frame: null,
 };
+
+const HEART_PANEL_POSITIONS = [
+  { point: -2.5, x: -58, z: 170, scale: 1.24, scaleX: 0.26, rotate: 88, blur: 16, brightness: 0.24, opacity: 0, edge: 1 },
+  { point: -2, x: -41, z: 110, scale: 1.42, scaleX: 0.36, rotate: 76, blur: 12, brightness: 0.42, opacity: 0.58, edge: 1 },
+  { point: -1, x: -19, z: -12, scale: 1.18, scaleX: 0.5, rotate: 54, blur: 6, brightness: 0.58, opacity: 0.78, edge: 0.96 },
+  { point: 0, x: 0, z: -320, scale: 1.09, scaleX: 1, rotate: 0, blur: 0, brightness: 0.94, opacity: 1, edge: 0.58 },
+  { point: 1, x: 19, z: -12, scale: 1.18, scaleX: 0.5, rotate: -54, blur: 6, brightness: 0.58, opacity: 0.78, edge: 0.96 },
+  { point: 2, x: 41, z: 110, scale: 1.42, scaleX: 0.36, rotate: -76, blur: 12, brightness: 0.42, opacity: 0.58, edge: 1 },
+  { point: 2.5, x: 58, z: 170, scale: 1.24, scaleX: 0.26, rotate: -88, blur: 16, brightness: 0.24, opacity: 0, edge: 1 },
+];
+
+function interpolateHeartRole(relative) {
+  const clampedRelative = Math.min(2.5, Math.max(-2.5, relative));
+
+  for (let i = 0; i < HEART_PANEL_POSITIONS.length - 1; i += 1) {
+    const start = HEART_PANEL_POSITIONS[i];
+    const end = HEART_PANEL_POSITIONS[i + 1];
+
+    if (clampedRelative >= start.point && clampedRelative <= end.point) {
+      const t = (clampedRelative - start.point) / (end.point - start.point);
+      const easedT = t * t * (3 - 2 * t);
+
+      return Object.keys(start).reduce((role, key) => {
+        role[key] = start[key] + (end[key] - start[key]) * easedT;
+        return role;
+      }, {});
+    }
+  }
+
+  return clampedRelative < 0 ? HEART_PANEL_POSITIONS[0] : HEART_PANEL_POSITIONS[HEART_PANEL_POSITIONS.length - 1];
+}
+
+function getHeartCircularRelative(index, virtualIndex, panelCount) {
+  return index - virtualIndex;
+}
 
 function startHeartSmoothing() {
   if (heartScrollState.frame) {
@@ -1344,14 +1382,13 @@ function startHeartSmoothing() {
 
 function setHeartTargetProgress(progress, immediate = false) {
   heartScrollState.target = Math.min(1, Math.max(0, progress));
+  heartScrollState.current = heartScrollState.target;
+  renderHeartProgress(heartScrollState.current);
 
-  if (immediate) {
-    heartScrollState.current = heartScrollState.target;
-    renderHeartProgress(heartScrollState.current);
-    return;
+  if (heartScrollState.frame) {
+    cancelAnimationFrame(heartScrollState.frame);
+    heartScrollState.frame = null;
   }
-
-  startHeartSmoothing();
 }
 
 function renderHeartProgress(progress) {
@@ -1359,75 +1396,65 @@ function renderHeartProgress(progress) {
     return;
   }
 
+  const panelCount = heartPhotoPanels.length;
+
+  if (!panelCount) {
+    return;
+  }
+
   const introEnd = 0.14;
-  const photoProgress = Math.min(1, Math.max(0, (progress - introEnd) / (1 - introEnd)));
+  const photoEnd = 0.92;
+  const photoProgress = Math.min(1, Math.max(0, (progress - introEnd) / (photoEnd - introEnd)));
   const copyFade = 1 - Math.min(1, Math.max(0, (progress - 0.05) / 0.11));
-  const activeIndex = Math.min(4, Math.max(0, Math.round(photoProgress * 4)));
-  const panelRoles = [
-    { width: 392, height: 1374, y: 0, scale: 0.82 },
-    { width: 486, height: 1704, y: 0, scale: 0.88 },
-    { width: 486, height: 3107, y: 0, scale: 0.94 },
-  ];
-  const viewportScale = Math.min(1, Math.max(0.58, window.innerHeight / 1121));
-  const gap = 50;
-  const panelWidths = heartPhotoPanels.map((_, index) => {
-    const relativeIndex = Math.min(2, Math.abs(index - activeIndex));
-    return panelRoles[relativeIndex].width * viewportScale;
-  });
-  const panelPositions = [];
-  let cursorX = 0;
-
-  panelWidths.forEach((width, index) => {
-    panelPositions[index] = cursorX + width / 2;
-    cursorX += width + gap;
-  });
-
-  const activeCenter = panelPositions[activeIndex] || 0;
-  const nextIndex = Math.min(4, activeIndex + 1);
-  const nextCenter = panelPositions[nextIndex] || activeCenter;
-  const segmentProgress = Math.min(1, Math.max(0, photoProgress * 4 - activeIndex));
-  const trackX = activeCenter + (nextCenter - activeCenter) * segmentProgress;
+  const rawVirtualIndex = photoProgress * (panelCount - 1);
+  const virtualIndex = rawVirtualIndex;
+  const activeIndex = Math.min(panelCount - 1, Math.max(0, Math.round(virtualIndex)));
+  const centerWidth = 700;
+  const centerHeight = 393.75;
+  const sideWidth = Math.min(window.innerWidth * 0.34, Math.max(300, window.innerWidth * 0.27));
+  const sideHeight = sideWidth * 0.5625;
+  const farWidth = Math.min(window.innerWidth * 0.34, Math.max(310, window.innerWidth * 0.28));
+  const farHeight = farWidth * 0.5625;
 
   heartSection.style.setProperty("--heart-copy-opacity", copyFade.toFixed(3));
   heartSection.style.setProperty("--heart-photo-opacity", "1");
-  heartPhotoCarousel.style.setProperty("--heart-track-offset", `${-trackX}px`);
-
-  const activeIndexChanged = activeIndex !== heartLastActiveIndex;
-  heartLastActiveIndex = activeIndex;
 
   heartPhotoPanels.forEach((panel, index) => {
-    const relativeIndex = Math.min(2, Math.abs(index - activeIndex));
-    const role = panelRoles[relativeIndex];
-    const panelCenter = window.innerWidth / 2 + panelPositions[index] - trackX;
-    const distanceFromCenter = (panelCenter - window.innerWidth / 2) / window.innerWidth;
-    const parallax = Math.max(-1, Math.min(1, distanceFromCenter * 2.6)) * 54;
+    const relative = getHeartCircularRelative(index, virtualIndex, panelCount);
+    const role = interpolateHeartRole(relative);
+    const distance = Math.min(2, Math.abs(relative));
+    const width = centerWidth + (sideWidth - centerWidth) * Math.min(1, distance);
+    const height = centerHeight + (sideHeight - centerHeight) * Math.min(1, distance);
+    const farMix = Math.max(0, distance - 1);
+    const finalWidth = width + (farWidth - sideWidth) * farMix;
+    const finalHeight = height + (farHeight - sideHeight) * farMix;
 
-    if (activeIndexChanged) {
-      const width = role.width * viewportScale;
-      const height = role.height * viewportScale;
-      panel.style.setProperty("--panel-width", `${width.toFixed(2)}px`);
-      panel.style.setProperty("--panel-height", `${height.toFixed(2)}px`);
-    }
-    panel.style.setProperty("--panel-y", `${role.y}px`);
-    panel.style.setProperty("--panel-scale", `${role.scale}`);
-    panel.style.setProperty("--panel-parallax", `${parallax.toFixed(2)}px`);
-    panel.style.setProperty("--panel-parallax-inner", `${(parallax * -0.45).toFixed(2)}px`);
+    panel.style.setProperty("--panel-width", `${finalWidth.toFixed(2)}px`);
+    panel.style.setProperty("--panel-height", `${finalHeight.toFixed(2)}px`);
+    panel.style.setProperty("--panel-x", `${role.x.toFixed(2)}vw`);
+    panel.style.setProperty("--panel-y", `${(Math.abs(relative) * 8).toFixed(2)}px`);
+    panel.style.setProperty("--panel-z", `${role.z.toFixed(2)}px`);
+    panel.style.setProperty("--panel-scale", role.scale.toFixed(3));
+    panel.style.setProperty("--panel-scale-x", (role.scale * role.scaleX).toFixed(3));
+    panel.style.setProperty("--panel-scale-y", role.scale.toFixed(3));
+    panel.style.setProperty("--panel-rotate", `${role.rotate.toFixed(2)}deg`);
+    panel.style.setProperty("--panel-blur", `${role.blur.toFixed(2)}px`);
+    panel.style.setProperty("--panel-brightness", role.brightness.toFixed(3));
+    panel.style.setProperty("--panel-opacity", role.opacity.toFixed(3));
+    panel.style.setProperty("--panel-edge-opacity", role.edge.toFixed(3));
+    const clipInset = Math.min(18, Math.max(0, Math.abs(relative) * 9));
+    const leftClipInset = relative > 0 ? clipInset : 0;
+    const rightClipInset = relative < 0 ? clipInset : 0;
+    panel.style.setProperty("--panel-clip-left-top", `${leftClipInset.toFixed(2)}%`);
+    panel.style.setProperty("--panel-clip-left-bottom", `${(100 - leftClipInset).toFixed(2)}%`);
+    panel.style.setProperty("--panel-clip-right-top", `${rightClipInset.toFixed(2)}%`);
+    panel.style.setProperty("--panel-clip-right-bottom", `${(100 - rightClipInset).toFixed(2)}%`);
+    panel.style.zIndex = String(10 - Math.round(distance * 2));
     panel.classList.toggle("is-active", index === activeIndex);
   });
 
   if (sceneFlicker) {
-    const flickerStart = 0.96;
-
-    if (progress >= flickerStart && progress < 1) {
-      const flickerProgress = (progress - flickerStart) / (1 - flickerStart);
-      const steps = 3;
-      const stepIndex = Math.min(steps - 1, Math.floor(flickerProgress * steps));
-
-      sceneFlicker.style.background = stepIndex % 2 === 0 ? "#000" : "#fff";
-      sceneFlicker.style.opacity = "1";
-    } else {
-      sceneFlicker.style.opacity = "0";
-    }
+    sceneFlicker.style.opacity = "0";
   }
 }
 
