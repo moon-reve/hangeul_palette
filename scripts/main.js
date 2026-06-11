@@ -1405,15 +1405,12 @@ function renderHeartProgress(progress) {
   }
 }
 
-updateHeartSection();
 prepareExistingHeroTitleChars();
 setupVocalScene();
 keepHeroScreenInPlace();
 window.addEventListener("wheel", handleHeroTitleWheel, { passive: false });
 window.addEventListener("scroll", keepHeroScreenInPlace, { passive: true });
 window.addEventListener("keydown", resetHeroTitleWithKeyboard);
-window.addEventListener("scroll", updateHeartSection, { passive: true });
-window.addEventListener("resize", updateHeartSection);
 function updateHeartSectionFallback() {
   if (!heartSection) {
     return;
