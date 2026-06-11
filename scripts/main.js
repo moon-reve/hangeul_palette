@@ -529,6 +529,10 @@ function keepHeroScreenInPlace() {
     return;
   }
 
+  if (heroTitleState === "vocal" && vocalSceneTargetProgress >= 1) {
+    return;
+  }
+
   if ((window.scrollY || window.pageYOffset) > 0) {
     moveHeroTitleStep(1);
     window.scrollTo(0, 0);
@@ -552,9 +556,13 @@ function handleHeroTitleWheel(event) {
     return;
   }
 
-  event.preventDefault();
-
   if (heroTitleState === "vocal") {
+    if (event.deltaY > 0 && vocalSceneTargetProgress >= 1) {
+      return;
+    }
+
+    event.preventDefault();
+
     const nextProgress = vocalSceneTargetProgress + event.deltaY * 0.00058;
 
     if (event.deltaY < 0 && vocalSceneTargetProgress <= 0.02) {
@@ -565,6 +573,8 @@ function handleHeroTitleWheel(event) {
     setVocalSceneTargetProgress(nextProgress);
     return;
   }
+
+  event.preventDefault();
 
   if (heroTitleWheelTimer) {
     return;
