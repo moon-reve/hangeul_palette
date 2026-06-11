@@ -336,8 +336,8 @@
       }
 
       .vocal-svg {
-        width: min(60vw, 900px);
-        min-width: 500px;
+        width: min(76vw, 1180px);
+        min-width: 620px;
         overflow: visible;
         transform: translate3d(var(--vocal-svg-x, 0), var(--vocal-svg-y, 0), 0) scale(var(--vocal-svg-scale, 1));
         transform-origin: center;
@@ -361,7 +361,9 @@
 
       .vocal-dot {
         fill: #f4f1e8;
-        filter: url("#vocal-glow");
+        filter:
+          drop-shadow(0 0 5px rgba(255, 255, 255, 0.78))
+          drop-shadow(0 0 14px rgba(255, 255, 255, 0.38));
         opacity: var(--vocal-dot-opacity, 0);
       }
 
