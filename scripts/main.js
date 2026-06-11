@@ -34,8 +34,8 @@ const userPointer = { x: pointer.x, y: pointer.y };
 const autoSweep = {
   x: pointer.x,
   y: pointer.y,
-  prevX: pointer.x,
-  prevY: pointer.y,
+  strokeStartX: pointer.x,
+  strokeStartY: pointer.y,
   active: false,
   phase: Math.random() * Math.PI * 2,
   nextMarkAt: 0,
@@ -871,6 +871,7 @@ function addWashMark(x, y, force = 1, mode = "hover") {
 function addWashStroke(fromX, fromY, toX, toY, force = 0.7, mode = "auto") {
   const distance = Math.hypot(toX - fromX, toY - fromY);
   const steps = Math.max(3, Math.min(mode === "auto" ? 12 : 7, Math.ceil(distance / (mode === "auto" ? 48 : 86))));
+  const strokeDuration = mode === "auto" ? 760 : 0;
 
   for (let index = 1; index <= steps; index += 1) {
     const progress = index / steps;
@@ -878,8 +879,14 @@ function addWashStroke(fromX, fromY, toX, toY, force = 0.7, mode = "auto") {
     const wave = Math.sin((progress + performance.now() * 0.00018) * Math.PI * 2) * (mode === "auto" ? 8 : 18);
     const x = fromX + (toX - fromX) * ease;
     const y = fromY + (toY - fromY) * ease + wave;
+    const markForce = force * (0.82 + progress * 0.18);
+    const delay = strokeDuration * progress;
 
-    addWashMark(x, y, force * (0.82 + progress * 0.18), mode);
+    if (delay > 0) {
+      window.setTimeout(() => addWashMark(x, y, markForce, mode), delay);
+    } else {
+      addWashMark(x, y, markForce, mode);
+    }
   }
 }
 
@@ -1012,8 +1019,8 @@ function updateAmbientMotion(now) {
 
   if (idleFor > 1000 && !autoSweep.active) {
     autoSweep.active = true;
-    autoSweep.prevX = autoSweep.x;
-    autoSweep.prevY = autoSweep.y;
+    autoSweep.strokeStartX = autoSweep.x;
+    autoSweep.strokeStartY = autoSweep.y;
     autoSweep.nextMarkAt = now;
     autoSweep.nextShiftAt = now;
   }
@@ -1027,8 +1034,6 @@ function updateAmbientMotion(now) {
   const nextAutoX = autoSweep.targetX + driftX;
   const nextAutoY = autoSweep.targetY + driftY;
 
-  autoSweep.prevX += (autoSweep.x - autoSweep.prevX) * 0.62;
-  autoSweep.prevY += (autoSweep.y - autoSweep.prevY) * 0.62;
   autoSweep.x += (nextAutoX - autoSweep.x) * autoSweep.speed;
   autoSweep.y += (nextAutoY - autoSweep.y) * autoSweep.speed;
 
@@ -1040,7 +1045,9 @@ function updateAmbientMotion(now) {
     pointer.y = userPointer.y * (1 - autoWeight) + autoSweep.y * autoWeight;
 
     if (now > autoSweep.nextMarkAt) {
-      addWashStroke(autoSweep.prevX, autoSweep.prevY, autoSweep.x, autoSweep.y, autoSweep.force, "auto");
+      addWashStroke(autoSweep.strokeStartX, autoSweep.strokeStartY, autoSweep.x, autoSweep.y, autoSweep.force, "auto");
+      autoSweep.strokeStartX = autoSweep.x;
+      autoSweep.strokeStartY = autoSweep.y;
       autoSweep.nextMarkAt = now + 3000;
     }
   }
