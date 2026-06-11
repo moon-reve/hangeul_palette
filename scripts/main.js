@@ -986,6 +986,7 @@ function setPointer(clientX, clientY) {
   lastHoldPoint.x = pointer.x;
   lastHoldPoint.y = pointer.y;
   lastInputAt = performance.now();
+  autoSweep.active = false;
 }
 
 function setCursor(clientX, clientY) {
