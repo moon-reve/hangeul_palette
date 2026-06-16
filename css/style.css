@@ -180,6 +180,203 @@ a {
   background: #f5f0e7;
 }
 
+.site-footer {
+  min-height: 667px;
+  background: #1b1b1b;
+  color: #fff;
+  font-family:
+    Pretendard,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+.footer-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: calc(100% - 160px);
+  min-height: 667px;
+  margin: 0 auto;
+  padding-top: 88px;
+  padding-bottom: 127px;
+}
+
+.footer-top,
+.footer-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.footer-primary {
+  display: grid;
+  gap: 27px;
+  width: min(47.14vw, 905px);
+}
+
+.footer-search {
+  display: grid;
+  gap: 22px;
+  width: 386px;
+  margin: 0;
+}
+
+.footer-search-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.footer-search-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 367px;
+  margin-left: 9.5px;
+}
+
+.footer-search-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  background: transparent;
+}
+
+.footer-search-input::placeholder {
+  color: #fff;
+}
+
+.footer-search-button {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  place-items: center;
+  background: transparent;
+  cursor: pointer;
+}
+
+.footer-search-button img {
+  width: 24px;
+  height: 24px;
+}
+
+.footer-search::after {
+  content: "";
+  display: block;
+  width: 386px;
+  height: 1px;
+  background: #fff;
+}
+
+.footer-nav {
+  display: flex;
+  gap: 36px;
+  align-items: center;
+}
+
+.footer-nav a {
+  color: #fff;
+  font-size: clamp(18px, 1.467vw, 28.177px);
+  font-weight: 400;
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.footer-social {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.footer-social-link {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  place-items: center;
+  background: #fff;
+}
+
+.footer-social-link img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.footer-social-link-image {
+  background: transparent;
+}
+
+.footer-social-link-image img {
+  width: 56px;
+  height: 56px;
+}
+
+.footer-info {
+  display: grid;
+  gap: 0;
+  width: 563px;
+}
+
+.footer-policy {
+  display: flex;
+  gap: 26px;
+  align-items: center;
+}
+
+.footer-policy a {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 2.18;
+  white-space: nowrap;
+}
+
+.footer-address {
+  display: grid;
+  color: #fff;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 2.18;
+}
+
+.footer-copyright {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+}
+
+.footer-copyright p {
+  margin: 0;
+  color: #727272;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 2.18;
+  white-space: nowrap;
+}
+
+.footer-copyright img {
+  display: block;
+  width: 189.257px;
+  height: 48px;
+  object-fit: fill;
+  object-position: bottom;
+}
+
 .visit-section {
   position: relative;
   min-height: 100svh;
@@ -797,6 +994,59 @@ a {
   .visit-brand {
     left: 28px;
     bottom: 48px;
+  }
+
+  .site-footer {
+    min-height: auto;
+  }
+
+  .footer-inner {
+    width: auto;
+    min-height: auto;
+    padding: 64px 28px;
+    gap: 96px;
+  }
+
+  .footer-top,
+  .footer-bottom {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 48px;
+  }
+
+  .footer-primary,
+  .footer-info {
+    width: 100%;
+  }
+
+  .footer-search {
+    width: min(100%, 386px);
+  }
+
+  .footer-search-row,
+  .footer-search::after {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .footer-nav,
+  .footer-policy,
+  .footer-copyright {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .footer-nav a {
+    font-size: 22px;
+  }
+
+  .footer-address {
+    font-size: 15px;
+  }
+
+  .footer-copyright p {
+    white-space: normal;
   }
 
   .king-people-scene-video {
