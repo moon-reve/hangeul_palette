@@ -127,7 +127,7 @@ function initHangulReveal(container, baseSrc, revealSrc) {
       uTexel: { value: texelSize },
       uTime: { value: 0 },
       uDelta: { value: 0.016 },
-      uRadius: { value: 310 },
+      uRadius: { value: 155 },
       uStrength: { value: 0 },
       uVelocity: { value: velocity },
     },
@@ -361,7 +361,7 @@ function initHangulReveal(container, baseSrc, revealSrc) {
     renderer.setSize(width, height, false);
     resolution.set(width, height);
     texelSize.set(1 / targetWidth, 1 / targetHeight);
-    maskMaterial.uniforms.uRadius.value = Math.min(350, Math.max(250, Math.min(width, height) * 0.38));
+    maskMaterial.uniforms.uRadius.value = Math.min(175, Math.max(125, Math.min(width, height) * 0.19));
 
     if (renderTargetA) {
       renderTargetA.dispose();
