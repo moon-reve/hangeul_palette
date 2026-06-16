@@ -3,144 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>국립한글박물관 | Hero</title>
-    <script src="./assets/vendor/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <title>국립한글박물관</title>
     <link rel="stylesheet" href="./css/style.css" />
   </head>
   <body>
-    <svg width="0" height="0" aria-hidden="true" focusable="false">
-      <filter id="paper-displace">
-        <feTurbulence
-          id="paper-turbulence"
-          type="fractalNoise"
-          baseFrequency="0.006 0.012"
-          numOctaves="2"
-          seed="7"
-          result="noise"
-        />
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="7" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-    </svg>
     <main>
-      <section id="hero" class="section section-hero hero" aria-label="국립한글박물관 히어로">
-      <canvas class="color-wash" aria-hidden="true"></canvas>
-      <div class="emboss-stage" aria-hidden="true">
-        <object class="emboss-object" data="./assets/emboss/hero_bg_5_group.svg" type="image/svg+xml"></object>
-      </div>
-      <p class="hero-label label-top semibold">펼쳐보기</p>
-      <p class="hero-label label-left">국립한글박물관</p>
-      <h1 class="hero-title">
-        <span class="title-line">
-          <span class="title-strong">
-            <span class="title-char" style="--char-delay: 0ms">한</span><span class="title-char" style="--char-delay: 72ms">글</span><span class="title-char" style="--char-delay: 144ms">의</span>
-          </span><span class="title-char" style="--char-delay: 216ms">&nbsp;</span><span class="title-strong"><span class="title-char" style="--char-delay: 288ms">시</span><span class="title-char" style="--char-delay: 360ms">작</span></span><span class="title-char" style="--char-delay: 432ms">은</span>
-        </span>
-        <span class="title-line">
-          <span class="title-char" style="--char-delay: 504ms">글</span><span class="title-char" style="--char-delay: 576ms">자</span><span class="title-char" style="--char-delay: 648ms">가</span><span class="title-char" style="--char-delay: 720ms">&nbsp;</span><span class="title-char" style="--char-delay: 792ms">아</span><span class="title-char" style="--char-delay: 864ms">니</span><span class="title-char" style="--char-delay: 936ms">었</span><span class="title-char" style="--char-delay: 1008ms">습</span><span class="title-char" style="--char-delay: 1080ms">니</span><span class="title-char" style="--char-delay: 1152ms">다</span><span class="title-char" style="--char-delay: 1224ms">.</span>
-        </span>
-      </h1>
-      <div class="vocal-stage" aria-hidden="true">
-        <svg class="vocal-svg" viewBox="0 0 900 620" role="img" aria-label="소리가 글자가 되는 과정">
-          <defs>
-            <filter id="vocal-glow" x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur stdDeviation="5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <path class="vocal-line vocal-outline" d="M360 84 C356 158 332 201 292 244 C258 281 244 326 289 334 C337 343 358 325 374 354 C395 392 348 405 366 447 C385 497 414 531 487 525 C547 519 587 507 606 540 C621 568 621 594 621 612" />
-          <path class="vocal-line vocal-lip" d="M684 278 C684 336 683 377 655 413 C625 454 656 485 677 522 C696 556 696 585 693 612" />
-          <path class="vocal-line vocal-palate" d="M438 318 C500 305 577 312 621 321 C646 326 665 333 681 346" />
-          <path class="vocal-line vocal-tongue" d="M389 360 C412 326 459 331 471 368 C487 416 445 442 402 449" />
-          <path id="vocal-sound-path" class="vocal-sound-path" d="M606 546 C596 488 611 435 646 392 C674 356 684 318 684 278" />
-          <circle class="vocal-dot" r="7" cx="606" cy="546" />
-          <circle class="vocal-hotspot vocal-hotspot-throat" r="26" cx="606" cy="546" />
-          <circle class="vocal-hotspot vocal-hotspot-tongue" r="28" cx="430" cy="384" />
-          <circle class="vocal-hotspot vocal-hotspot-lip" r="30" cx="681" cy="286" />
-        </svg>
-        <div class="vocal-symbols" aria-hidden="true">
-          <span class="vocal-symbol vocal-symbol-m">ㅁ</span>
-          <span class="vocal-symbol vocal-symbol-n">ㄴ</span>
-          <span class="vocal-symbol vocal-symbol-ng">ㅇ</span>
-          <span class="vocal-symbol vocal-vowel vocal-vowel-dot">ㆍ</span>
-          <span class="vocal-symbol vocal-vowel vocal-vowel-eu">ㅡ</span>
-          <span class="vocal-symbol vocal-vowel vocal-vowel-i">ㅣ</span>
-          <span class="vocal-final">한 글</span>
-          <span class="vocal-more">제작원리 더 알아보기</span>
+      <section class="hero" aria-label="국립한글박물관 히어로">
+        <div class="hero-sticky">
+          <a class="hero-menu" href="#contents">펼쳐보기</a>
+
+          <div class="hero-copy-group">
+            <div class="hero-brand" aria-label="국립한글박물관 문화체육관광부">
+              <img class="hero-brand-mark" src="./assets/icons/brand-mark.svg" alt="" aria-hidden="true" />
+              <span>국립한글박물관 문화체육관광부</span>
+            </div>
+
+            <div class="hero-copy" aria-live="polite">
+              <h1 class="hero-title hero-title-initial is-active">
+                <span class="hero-title-strong">한글의 시작</span><span class="hero-title-light">은 글자가 아니었습니다.</span>
+              </h1>
+
+              <p class="hero-title hero-title-next">
+                <span class="hero-title-light">사람을 향한</span><span class="hero-title-strong"> 마음</span><span class="hero-title-light">이었습니다.</span>
+              </p>
+            </div>
+
+            <p class="hero-scroll">아래로 내려보기</p>
+          </div>
         </div>
-      </div>
-      <p class="hero-label label-scroll">아래로 내려보기</p>
-      <div class="letter-cloud" aria-hidden="true"></div>
-      <p class="hero-label label-bottom semibold">국립한글박물관</p>
-      <div class="loading-ring" aria-hidden="true"></div>
       </section>
 
-      <section id="king-people" class="section section-placeholder section-king-people" aria-label="왕과 백성"></section>
-      <section id="sound" class="section section-placeholder section-sound" aria-label="소리"></section>
-      <section id="heart" class="section section-heart" aria-label="마음">
-        <div class="heart-sticky">
-          <p class="heart-label">시간의 연결</p>
-          <div class="heart-room" aria-hidden="true">
-            <div class="heart-room-scene">
-              <span class="heart-room-ellipse heart-room-ellipse-top"></span>
-            </div>
-          </div>
-          <div class="heart-photo-stage" aria-hidden="true">
-            <div class="heart-photo-carousel">
-              <div class="heart-photo-panel heart-photo-panel-first" style="--panel-index: 0; --panel-parallax: 0px">
-                <p class="heart-copy-text">
-                  마음은 한글로<br />
-                  <strong>기록</strong> 되었습니다.
-                </p>
-              </div>
-              <div class="heart-photo-panel" style="--panel-index: 1; --panel-parallax: 0px">
-                <span class="heart-photo-placeholder">사진 2</span>
-              </div>
-              <div class="heart-photo-panel" style="--panel-index: 2; --panel-parallax: 0px">
-                <span class="heart-photo-placeholder">사진 3</span>
-              </div>
-              <div class="heart-photo-panel" style="--panel-index: 3; --panel-parallax: 0px">
-                <span class="heart-photo-placeholder">사진 4</span>
-              </div>
-              <div class="heart-photo-panel" style="--panel-index: 4; --panel-parallax: 0px">
-                <span class="heart-photo-placeholder">사진 5</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      <section id="record" class="section section-record" aria-label="기록">
-        <div class="record-stage">
-          <div class="record-stack" aria-hidden="true">
-            <div class="record-box" data-index="0" style="left: 31.46%; top: 16.93%; width: 37.03%; height: 19.38%"></div>
-            <div class="record-box" data-index="1" style="left: 30.47%; top: 19.52%; width: 39.01%; height: 19.38%"></div>
-            <div class="record-box" data-index="2" style="left: 29.74%; top: 22.93%; width: 40.47%; height: 19.38%"></div>
-            <div class="record-box" data-index="3" style="left: 28.59%; top: 26.82%; width: 42.76%; height: 19.38%"></div>
-            <div class="record-box" data-index="4" style="left: 27.40%; top: 30.18%; width: 45.10%; height: 19.38%"></div>
-            <div class="record-box" data-index="5" style="left: 26.72%; top: 34.23%; width: 46.46%; height: 19.38%"></div>
-            <div class="record-box" data-index="6" style="left: 26.20%; top: 38.24%; width: 47.55%; height: 19.38%"></div>
-            <div class="record-box" data-index="7" style="left: 25.52%; top: 42.62%; width: 48.91%; height: 19.38%"></div>
-            <div class="record-box" data-index="8" style="left: 24.84%; top: 47.12%; width: 50.21%; height: 19.38%"></div>
-            <div class="record-box" data-index="9" style="left: 23.70%; top: 51.77%; width: 52.50%; height: 19.38%"></div>
-            <div class="record-box" data-index="10" style="left: 23.02%; top: 56.11%; width: 53.85%; height: 19.78%"></div>
-          </div>
-          <p class="record-label">시간의 연결</p>
-          <p class="record-copy">
-            기록은 <strong>시간을 넘어</strong> 이어졌다
-          </p>
-        </div>
-      </section>
-      <section id="past" class="section section-placeholder section-past" aria-label="과거"></section>
-      <section id="connection" class="section section-placeholder section-connection" aria-label="연결"></section>
-      <section id="closing" class="section section-placeholder section-closing" aria-label="마무리"></section>
+      <section id="contents" class="contents" aria-label="본문"></section>
     </main>
-    <footer id="footer" class="site-footer" aria-label="푸터"></footer>
-    <div class="cursor-ring" aria-hidden="true"></div>
-    <div class="cursor-dot" aria-hidden="true"></div>
-    <div class="scene-flicker" aria-hidden="true"></div>
     <script src="./scripts/main.js"></script>
   </body>
 </html>
