@@ -49,7 +49,7 @@ function setKingPeopleScene() {
   const scrollableDistance = Math.max(1, kingPeopleSection.offsetHeight - window.innerHeight);
   const progress = Math.min(1, Math.max(0, -rect.top / scrollableDistance));
   const videoProgress = smoothProgress(progress, 0.05, 0.58);
-  const heartProgress = smoothProgress(progress, 0.62, 0.9);
+  const heartProgress = smoothProgress(progress, 0.58, 0.88);
   const baseWidth = Math.max(1, kingPeopleVideoFrame.offsetWidth);
   const baseHeight = Math.max(1, kingPeopleVideoFrame.offsetHeight);
   const coverScale = Math.max(window.innerWidth / baseWidth, window.innerHeight / baseHeight);
@@ -67,17 +67,18 @@ setKingPeopleScene();
 window.addEventListener("scroll", setKingPeopleScene, { passive: true });
 window.addEventListener("resize", setKingPeopleScene);
 
-function initHangulReveal(container, baseSrc, revealSrc) {
+function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
   if (!container) {
     return;
   }
 
+  const overlayOnly = Boolean(options.overlayOnly);
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
-    alpha: false,
+    alpha: overlayOnly,
     powerPreference: "high-performance",
   });
-  renderer.setClearColor(0xe1e1e1, 1);
+  renderer.setClearColor(overlayOnly ? 0x000000 : 0xe1e1e1, overlayOnly ? 0 : 1);
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
@@ -104,6 +105,7 @@ function initHangulReveal(container, baseSrc, revealSrc) {
   const velocity = new THREE.Vector2(0, 0);
   const resolution = new THREE.Vector2(1, 1);
   const imageSize = new THREE.Vector2(1920, 1080);
+  const coverPosition = new THREE.Vector2(0.5, options.coverPositionY ?? 0.5);
   const texelSize = new THREE.Vector2(1, 1);
   let pointerInside = 0;
   let renderTargetA;
@@ -127,7 +129,7 @@ function initHangulReveal(container, baseSrc, revealSrc) {
       uTexel: { value: texelSize },
       uTime: { value: 0 },
       uDelta: { value: 0.016 },
-      uRadius: { value: 217 },
+      uRadius: { value: 195 },
       uStrength: { value: 0 },
       uVelocity: { value: velocity },
     },
@@ -176,15 +178,15 @@ function initHangulReveal(container, baseSrc, revealSrc) {
       }
 
       void main() {
-        float previous = texture2D(uPrevious, vUv).r * 0.28;
-        previous += texture2D(uPrevious, vUv + vec2(uTexel.x, 0.0)).r * 0.12;
-        previous += texture2D(uPrevious, vUv - vec2(uTexel.x, 0.0)).r * 0.12;
-        previous += texture2D(uPrevious, vUv + vec2(0.0, uTexel.y)).r * 0.12;
-        previous += texture2D(uPrevious, vUv - vec2(0.0, uTexel.y)).r * 0.12;
-        previous += texture2D(uPrevious, vUv + uTexel).r * 0.06;
-        previous += texture2D(uPrevious, vUv - uTexel).r * 0.06;
-        previous += texture2D(uPrevious, vUv + vec2(uTexel.x, -uTexel.y)).r * 0.06;
-        previous += texture2D(uPrevious, vUv + vec2(-uTexel.x, uTexel.y)).r * 0.06;
+        float previous = texture2D(uPrevious, vUv).r * 0.52;
+        previous += texture2D(uPrevious, vUv + vec2(uTexel.x, 0.0)).r * 0.08;
+        previous += texture2D(uPrevious, vUv - vec2(uTexel.x, 0.0)).r * 0.08;
+        previous += texture2D(uPrevious, vUv + vec2(0.0, uTexel.y)).r * 0.08;
+        previous += texture2D(uPrevious, vUv - vec2(0.0, uTexel.y)).r * 0.08;
+        previous += texture2D(uPrevious, vUv + uTexel).r * 0.04;
+        previous += texture2D(uPrevious, vUv - uTexel).r * 0.04;
+        previous += texture2D(uPrevious, vUv + vec2(uTexel.x, -uTexel.y)).r * 0.04;
+        previous += texture2D(uPrevious, vUv + vec2(-uTexel.x, uTexel.y)).r * 0.04;
 
         vec2 p = vUv - uPointer;
         p.x *= uResolution.x / uResolution.y;
@@ -200,10 +202,10 @@ function initHangulReveal(container, baseSrc, revealSrc) {
         float absorbFiber = fbm(p * 34.0 - motion * 2.2 + vec2(-uTime * 0.095, uTime * 0.07));
         float organicRadius = radius * (0.88 + ripple * 0.14 + fiber * 0.055 + (absorbFiber - 0.5) * 0.055 * motionAmount + (idleFlow - 0.5) * 0.04);
         float d = length(p);
-        float core = 1.0 - smoothstep(organicRadius * 0.26, organicRadius * 0.86, d);
-        float absorb = 1.0 - smoothstep(organicRadius * 0.62, organicRadius * 1.18, d);
-        float feather = smoothstep(0.12, 0.88, fiber * 0.66 + absorbFiber * 0.22 + idleFlow * 0.12);
-        float ink = max(core, absorb * feather * 0.78);
+        float core = 1.0 - smoothstep(organicRadius * 0.36, organicRadius * 0.78, d);
+        float absorb = 1.0 - smoothstep(organicRadius * 0.68, organicRadius * 1.02, d);
+        float feather = smoothstep(0.2, 0.72, fiber * 0.66 + absorbFiber * 0.22 + idleFlow * 0.12);
+        float ink = max(core, absorb * feather * 0.86);
 
         float decay = exp(-uDelta * 1.05);
         float mask = max(previous * decay, ink * uStrength);
@@ -221,10 +223,12 @@ function initHangulReveal(container, baseSrc, revealSrc) {
       uMask: { value: null },
       uResolution: { value: resolution },
       uImageSize: { value: imageSize },
+      uCoverPosition: { value: coverPosition },
       uTexel: { value: texelSize },
       uPointer: { value: pointer },
       uVelocity: { value: velocity },
       uTime: { value: 0 },
+      uOverlayOnly: { value: overlayOnly ? 1 : 0 },
     },
     vertexShader,
     fragmentShader: `
@@ -237,10 +241,12 @@ function initHangulReveal(container, baseSrc, revealSrc) {
       uniform sampler2D uMask;
       uniform vec2 uResolution;
       uniform vec2 uImageSize;
+      uniform vec2 uCoverPosition;
       uniform vec2 uTexel;
       uniform vec2 uPointer;
       uniform vec2 uVelocity;
       uniform float uTime;
+      uniform float uOverlayOnly;
 
       vec2 coverUv(vec2 uv) {
         float screenAspect = uResolution.x / uResolution.y;
@@ -253,7 +259,12 @@ function initHangulReveal(container, baseSrc, revealSrc) {
           scale.x = imageAspect / screenAspect;
         }
 
-        return (uv - 0.5) * scale + 0.5;
+        vec2 offset = vec2(
+          (1.0 - scale.x) * uCoverPosition.x,
+          (1.0 - scale.y) * (1.0 - uCoverPosition.y)
+        );
+
+        return uv * scale + offset;
       }
 
       float luminance(vec3 color) {
@@ -302,9 +313,9 @@ function initHangulReveal(container, baseSrc, revealSrc) {
         float livingNoise = fbm(imageUv * 8.0 + flow * 1.35 + pointerFlow * 1.55 + vec2(uTime * 0.075, -uTime * 0.055));
         float paperAbsorb = fbm(imageUv * 32.0 - pointerFlow * 2.0 + vec2(-uTime * 0.1, uTime * 0.075));
         float idleAbsorb = fbm(imageUv * 18.0 + flow * 1.8 + vec2(uTime * 0.065, uTime * 0.05));
-        vec2 displacement = (flow * 0.007 + pointerFlow * 0.0035 + (livingNoise - 0.5) * 0.0035) * mask;
-        displacement += pointerFlow * edgePulse * (paperAbsorb - 0.32) * 0.009;
-        displacement += flow * edgePulse * (idleAbsorb - 0.5) * 0.007;
+        vec2 displacement = (flow * 0.0035 + pointerFlow * 0.0018 + (livingNoise - 0.5) * 0.0018) * mask;
+        displacement += pointerFlow * edgePulse * (paperAbsorb - 0.32) * 0.0045;
+        displacement += flow * edgePulse * (idleAbsorb - 0.5) * 0.0035;
 
         vec3 baseColor = vec3(0.88235294);
         vec3 revealColor = texture2D(uReveal, imageUv + displacement).rgb;
@@ -317,7 +328,7 @@ function initHangulReveal(container, baseSrc, revealSrc) {
         float diffuse = clamp(dot(normal, lightDirection), 0.0, 1.0);
         float rim = pow(1.0 - clamp(normal.z, 0.0, 1.0), 2.0);
 
-        float reveal = smoothstep(0.02, 0.78, mask);
+        float reveal = smoothstep(0.08, 0.58, mask);
         float edge = edgePulse * (0.72 + paperAbsorb * 0.18 + idleAbsorb * 0.1);
         float breath = 0.982 + sin(uTime * 0.72 + livingNoise * 3.14) * 0.018;
         reveal *= breath;
@@ -330,7 +341,10 @@ function initHangulReveal(container, baseSrc, revealSrc) {
 
         vec3 color = mix(baseColor, lifted, clamp(reveal, 0.0, 1.0));
         color += edge * vec3(0.018);
-        gl_FragColor = vec4(color, 1.0);
+        vec3 overlayColor = lifted + edge * vec3(0.018);
+        float alpha = mix(1.0, clamp(reveal, 0.0, 1.0), uOverlayOnly);
+
+        gl_FragColor = vec4(mix(color, overlayColor, uOverlayOnly), alpha);
       }
     `,
   });
@@ -361,7 +375,7 @@ function initHangulReveal(container, baseSrc, revealSrc) {
     renderer.setSize(width, height, false);
     resolution.set(width, height);
     texelSize.set(1 / targetWidth, 1 / targetHeight);
-    maskMaterial.uniforms.uRadius.value = Math.min(245, Math.max(175, Math.min(width, height) * 0.266));
+    maskMaterial.uniforms.uRadius.value = Math.min(220, Math.max(158, Math.min(width, height) * 0.24));
 
     if (renderTargetA) {
       renderTargetA.dispose();
@@ -376,7 +390,7 @@ function initHangulReveal(container, baseSrc, revealSrc) {
     renderer.setRenderTarget(renderTargetB);
     renderer.clear();
     renderer.setRenderTarget(null);
-    renderer.setClearColor(0xe1e1e1, 1);
+    renderer.setClearColor(overlayOnly ? 0x000000 : 0xe1e1e1, overlayOnly ? 0 : 1);
     maskMaterial.uniforms.uPrevious.value = renderTargetA.texture;
     displayMaterial.uniforms.uMask.value = renderTargetA.texture;
   }
