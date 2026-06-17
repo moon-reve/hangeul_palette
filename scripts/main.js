@@ -9,6 +9,10 @@ const kingPeopleVideoFrame = document.querySelector(".king-people-video-frame");
 const heroWebgl = document.querySelector(".hero-webgl");
 const kingPeopleWebgl = document.querySelector(".king-people-webgl");
 const kingPeopleHeartWebgl = document.querySelector(".king-people-heart-webgl");
+const storyPageIntro = document.querySelector(".story-page-intro");
+const soundInteraction = document.querySelector(".sound-interaction");
+const soundInteractionSticky = document.querySelector(".sound-interaction-sticky");
+const gsapInstance = window.gsap || null;
 
 function setHeroTitleStep() {
   if (!hero || !initialTitle || !nextTitle) {
@@ -60,6 +64,877 @@ setKingPeopleScene();
 window.addEventListener("scroll", setKingPeopleScene, { passive: true });
 window.addEventListener("resize", setKingPeopleScene);
 
+function setSoundInteractionPin() {
+  if (!soundInteraction || !soundInteractionSticky) {
+    return;
+  }
+
+  const rect = soundInteraction.getBoundingClientRect();
+  const shouldPin = rect.top <= 0 && rect.bottom > window.innerHeight;
+  const shouldRelease = rect.bottom <= window.innerHeight;
+
+  soundInteraction.classList.toggle("is-pinned", shouldPin);
+  soundInteraction.classList.toggle("is-released", shouldRelease);
+}
+
+setSoundInteractionPin();
+window.addEventListener("scroll", setSoundInteractionPin, { passive: true });
+window.addEventListener("resize", setSoundInteractionPin);
+
+function initSoundCollisionExperience() {
+  if (!soundInteraction || !soundInteractionSticky) {
+    return;
+  }
+
+  const root = document.createElement("div");
+  root.className = "sound-collision-webgl";
+  root.setAttribute("aria-hidden", "true");
+  soundInteractionSticky.appendChild(root);
+
+  let initialized = false;
+  let renderer;
+  let scene;
+  let camera;
+  let leftLetter;
+  let rightLetter;
+  let collision;
+  let waveform;
+  let scrollController;
+
+  function init() {
+    if (initialized) {
+      return;
+    }
+
+    initialized = true;
+    ({ renderer, scene, camera } = createSoundScene(root));
+    leftLetter = createKoreanConsonant("kieuk");
+    rightLetter = createKoreanConsonant("tieut");
+    scene.add(leftLetter, rightLetter);
+    collision = createCollisionController(scene, leftLetter, rightLetter);
+    waveform = createSoundWaveRenderer(scene);
+    scrollController = createScrollTimeline();
+
+    resize();
+    window.addEventListener("resize", resize);
+    if (gsapInstance) {
+      gsapInstance.ticker.add(render);
+    } else {
+      const fallbackRender = (now) => {
+        render(now * 0.001);
+        requestAnimationFrame(fallbackRender);
+      };
+      requestAnimationFrame(fallbackRender);
+    }
+  }
+
+  function createSoundScene(container) {
+    const localRenderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance",
+    });
+    localRenderer.setClearColor(0x000000, 0);
+    localRenderer.outputColorSpace = THREE.SRGBColorSpace;
+    container.appendChild(localRenderer.domElement);
+
+    const localScene = new THREE.Scene();
+    const localCamera = new THREE.PerspectiveCamera(33, 1, 0.1, 90);
+    localCamera.position.set(0, 0.1, 15.5);
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.45);
+    keyLight.position.set(-4.5, 5.5, 7);
+    localScene.add(keyLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffffff, 1.25);
+    rimLight.position.set(4.5, 3.5, 5);
+    localScene.add(rimLight);
+
+    localScene.add(new THREE.HemisphereLight(0xffffff, 0x9a9a9a, 1.65));
+
+    return { renderer: localRenderer, scene: localScene, camera: localCamera };
+  }
+
+  function createRoundedBar(width, height, radius) {
+    const x = -width / 2;
+    const y = -height / 2;
+    const shape = new THREE.Shape();
+    shape.moveTo(x + radius, y);
+    shape.lineTo(x + width - radius, y);
+    shape.quadraticCurveTo(x + width, y, x + width, y + radius);
+    shape.lineTo(x + width, y + height - radius);
+    shape.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    shape.lineTo(x + radius, y + height);
+    shape.quadraticCurveTo(x, y + height, x, y + height - radius);
+    shape.lineTo(x, y + radius);
+    shape.quadraticCurveTo(x, y, x + radius, y);
+    return shape;
+  }
+
+  function createWhiteStoneTexture() {
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+
+    const context = canvas.getContext("2d");
+    const image = context.createImageData(size, size);
+
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        const brickBand = Math.floor(y / 42);
+        const offsetX = brickBand % 2 === 0 ? 0 : 34;
+        const mortarX = Math.abs(((x + offsetX) % 86) - 43) > 39 ? 1 : 0;
+        const mortarY = y % 42 < 2 || y % 42 > 39 ? 1 : 0;
+        const grain =
+          Math.sin(x * 0.21 + y * 0.11) * 7 +
+          Math.sin(x * 0.047 - y * 0.18) * 9 +
+          (Math.random() - 0.5) * 32;
+        const mortar = Math.max(mortarX, mortarY);
+        const value = Math.max(0, Math.min(255, 214 + grain - mortar * 42));
+        const index = (y * size + x) * 4;
+
+        image.data[index] = value;
+        image.data[index + 1] = value;
+        image.data[index + 2] = value;
+        image.data[index + 3] = 255;
+      }
+    }
+
+    context.putImageData(image, 0, 0);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1.85, 1.35);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  const whiteStoneTexture = createWhiteStoneTexture();
+
+  function createCrackedStoneSurface(side, seed) {
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext("2d");
+    const roughnessCanvas = document.createElement("canvas");
+    roughnessCanvas.width = size;
+    roughnessCanvas.height = size;
+    const roughnessContext = roughnessCanvas.getContext("2d");
+    const normalCanvas = document.createElement("canvas");
+    normalCanvas.width = size;
+    normalCanvas.height = size;
+    const normalContext = normalCanvas.getContext("2d");
+    const aoCanvas = document.createElement("canvas");
+    aoCanvas.width = size;
+    aoCanvas.height = size;
+    const aoContext = aoCanvas.getContext("2d");
+    const baseCanvas = document.createElement("canvas");
+    baseCanvas.width = size;
+    baseCanvas.height = size;
+    const baseContext = baseCanvas.getContext("2d");
+    const baseRoughnessCanvas = document.createElement("canvas");
+    baseRoughnessCanvas.width = size;
+    baseRoughnessCanvas.height = size;
+    const baseRoughnessContext = baseRoughnessCanvas.getContext("2d");
+    const baseNormalCanvas = document.createElement("canvas");
+    baseNormalCanvas.width = size;
+    baseNormalCanvas.height = size;
+    const baseNormalContext = baseNormalCanvas.getContext("2d");
+    const baseAoCanvas = document.createElement("canvas");
+    baseAoCanvas.width = size;
+    baseAoCanvas.height = size;
+    const baseAoContext = baseAoCanvas.getContext("2d");
+    const baseImage = baseContext.createImageData(size, size);
+    const roughnessImage = baseRoughnessContext.createImageData(size, size);
+    const normalImage = baseNormalContext.createImageData(size, size);
+    const aoImage = baseAoContext.createImageData(size, size);
+    let randomSeed = seed * 9973 + 17;
+
+    function random() {
+      randomSeed = (randomSeed * 1664525 + 1013904223) >>> 0;
+      return randomSeed / 4294967296;
+    }
+
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        const brickBand = Math.floor(y / 42);
+        const offsetX = brickBand % 2 === 0 ? 0 : 34;
+        const mortarX = Math.abs(((x + offsetX) % 86) - 43) > 39 ? 1 : 0;
+        const mortarY = y % 42 < 2 || y % 42 > 39 ? 1 : 0;
+        const pores = random() > 0.974 ? -38 - random() * 34 : 0;
+        const mineral =
+          Math.sin(x * 0.19 + y * 0.13) * 7 +
+          Math.sin(x * 0.061 - y * 0.17) * 7 +
+          Math.sin(x * 0.033 + y * 0.049) * 10;
+        const grain = mineral + (random() - 0.5) * 22;
+        const mortar = Math.max(mortarX, mortarY);
+        const edgeWear = x < 5 || y < 5 || x > size - 6 || y > size - 6 ? 18 : 0;
+        const value = Math.max(0, Math.min(255, 232 + grain + pores - mortar * 28 - edgeWear));
+        const roughness = Math.max(0, Math.min(255, 220 + Math.abs(grain) * 1.2 + mortar * 22 + (pores < 0 ? 28 : 0)));
+        const normalX = Math.max(0, Math.min(255, 128 + Math.sin(x * 0.14 + y * 0.07) * 9 + (random() - 0.5) * 10));
+        const normalY = Math.max(0, Math.min(255, 128 + Math.cos(x * 0.08 - y * 0.16) * 9 + (random() - 0.5) * 10));
+        const ao = Math.max(0, Math.min(255, 232 - mortar * 34 + pores * 0.35 - edgeWear * 0.8));
+        const index = (y * size + x) * 4;
+
+        baseImage.data[index] = value;
+        baseImage.data[index + 1] = Math.max(0, value - 1);
+        baseImage.data[index + 2] = Math.max(0, value - 3);
+        baseImage.data[index + 3] = 255;
+        roughnessImage.data[index] = roughness;
+        roughnessImage.data[index + 1] = roughness;
+        roughnessImage.data[index + 2] = roughness;
+        roughnessImage.data[index + 3] = 255;
+        normalImage.data[index] = normalX;
+        normalImage.data[index + 1] = normalY;
+        normalImage.data[index + 2] = 255;
+        normalImage.data[index + 3] = 255;
+        aoImage.data[index] = ao;
+        aoImage.data[index + 1] = ao;
+        aoImage.data[index + 2] = ao;
+        aoImage.data[index + 3] = 255;
+      }
+    }
+    baseContext.putImageData(baseImage, 0, 0);
+    baseRoughnessContext.putImageData(roughnessImage, 0, 0);
+    baseNormalContext.putImageData(normalImage, 0, 0);
+    baseAoContext.putImageData(aoImage, 0, 0);
+
+    const contactX = side < 0 ? size * 0.72 : size * 0.28;
+    const contactY = size * (0.36 + random() * 0.28);
+    const cracks = [];
+    const chipCount = 18;
+    const chips = [];
+
+    for (let index = 0; index < 24; index += 1) {
+      const densityFalloff = index / 24;
+      const baseAngle = side < 0 ? Math.PI + (random() - 0.5) * 2.4 : (random() - 0.5) * 2.4;
+      const length = size * (0.16 + random() * 0.38) * (1 - densityFalloff * 0.38);
+      const segmentCount = 4 + Math.floor(random() * 5);
+      const branchCount = 1 + Math.floor(random() * 4);
+      const points = [{ x: contactX + (random() - 0.5) * 18, y: contactY + (random() - 0.5) * 28 }];
+      let angle = baseAngle + (random() - 0.5) * 1.2;
+
+      for (let step = 1; step <= segmentCount; step += 1) {
+        angle += (random() - 0.5) * 0.72;
+        const stepLength = length / segmentCount;
+        const previous = points[points.length - 1];
+        points.push({
+          x: previous.x + Math.cos(angle) * stepLength,
+          y: previous.y + Math.sin(angle) * stepLength * 0.72,
+        });
+      }
+
+      cracks.push({
+        points,
+        delay: random() * 0.16,
+        width: 0.65 + random() * 1.85,
+        alpha: 0.48 + random() * 0.42,
+        branches: Array.from({ length: branchCount }, () => {
+          const start = 1 + Math.floor(random() * Math.max(1, points.length - 2));
+          const direction = angle + (random() > 0.5 ? 1 : -1) * (0.72 + random() * 0.98);
+          const branchLength = length * (0.16 + random() * 0.24);
+          return {
+            start,
+            direction,
+            length: branchLength,
+            bend: (random() - 0.5) * 0.8,
+            width: 0.42 + random() * 0.82,
+          };
+        }),
+      });
+    }
+
+    for (let index = 0; index < chipCount; index += 1) {
+      const angle = random() * Math.PI * 2;
+      const radius = random() * size * 0.28;
+      chips.push({
+        x: contactX + Math.cos(angle) * radius,
+        y: contactY + Math.sin(angle) * radius * 0.68,
+        size: 2 + random() * 7,
+        rotation: random() * Math.PI,
+        delay: random() * 0.32,
+      });
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const roughnessTexture = new THREE.CanvasTexture(roughnessCanvas);
+    const normalTexture = new THREE.CanvasTexture(normalCanvas);
+    const aoTexture = new THREE.CanvasTexture(aoCanvas);
+    [texture, roughnessTexture, normalTexture, aoTexture].forEach((surfaceTexture) => {
+      surfaceTexture.wrapS = THREE.RepeatWrapping;
+      surfaceTexture.wrapT = THREE.RepeatWrapping;
+      surfaceTexture.repeat.set(1.35, 1.05);
+      surfaceTexture.needsUpdate = true;
+    });
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    roughnessTexture.colorSpace = THREE.NoColorSpace;
+    normalTexture.colorSpace = THREE.NoColorSpace;
+    aoTexture.colorSpace = THREE.NoColorSpace;
+
+    return {
+      texture,
+      roughnessTexture,
+      normalTexture,
+      aoTexture,
+      update(progress) {
+        context.clearRect(0, 0, size, size);
+        context.drawImage(baseCanvas, 0, 0);
+        roughnessContext.clearRect(0, 0, size, size);
+        roughnessContext.drawImage(baseRoughnessCanvas, 0, 0);
+        normalContext.clearRect(0, 0, size, size);
+        normalContext.drawImage(baseNormalCanvas, 0, 0);
+        aoContext.clearRect(0, 0, size, size);
+        aoContext.drawImage(baseAoCanvas, 0, 0);
+
+        if (progress <= 0.001) {
+          texture.needsUpdate = true;
+          roughnessTexture.needsUpdate = true;
+          normalTexture.needsUpdate = true;
+          aoTexture.needsUpdate = true;
+          return;
+        }
+
+        context.save();
+        context.globalCompositeOperation = "multiply";
+        roughnessContext.save();
+        roughnessContext.globalCompositeOperation = "screen";
+        normalContext.save();
+        normalContext.globalCompositeOperation = "source-over";
+        aoContext.save();
+        aoContext.globalCompositeOperation = "multiply";
+
+        cracks.forEach((crackLine) => {
+          const lineProgress = Math.min(1, Math.max(0, (progress - crackLine.delay) / 0.34));
+          if (lineProgress <= 0) {
+            return;
+          }
+
+          context.lineCap = "round";
+          context.lineJoin = "round";
+          context.strokeStyle = `rgba(42, 42, 42, ${crackLine.alpha * lineProgress})`;
+          context.lineWidth = crackLine.width * (0.65 + lineProgress * 0.55);
+          roughnessContext.strokeStyle = `rgba(245, 245, 245, ${0.34 * lineProgress})`;
+          roughnessContext.lineWidth = context.lineWidth * 1.8;
+          normalContext.strokeStyle = `rgba(84, 84, 210, ${0.32 * lineProgress})`;
+          normalContext.lineWidth = context.lineWidth * 1.35;
+          aoContext.strokeStyle = `rgba(178, 178, 178, ${0.42 * lineProgress})`;
+          aoContext.lineWidth = context.lineWidth * 1.55;
+          context.beginPath();
+          roughnessContext.beginPath();
+          normalContext.beginPath();
+          aoContext.beginPath();
+          context.moveTo(crackLine.points[0].x, crackLine.points[0].y);
+          roughnessContext.moveTo(crackLine.points[0].x, crackLine.points[0].y);
+          normalContext.moveTo(crackLine.points[0].x, crackLine.points[0].y);
+          aoContext.moveTo(crackLine.points[0].x, crackLine.points[0].y);
+
+          const visiblePointCount = Math.max(2, Math.ceil((crackLine.points.length - 1) * lineProgress));
+          for (let index = 1; index < visiblePointCount; index += 1) {
+            const point = crackLine.points[index];
+            context.lineTo(point.x, point.y);
+            roughnessContext.lineTo(point.x, point.y);
+            normalContext.lineTo(point.x, point.y);
+            aoContext.lineTo(point.x, point.y);
+          }
+          context.stroke();
+          roughnessContext.stroke();
+          normalContext.stroke();
+          aoContext.stroke();
+
+          crackLine.branches.forEach((branch) => {
+            const branchProgress = Math.min(1, Math.max(0, (lineProgress - 0.28) / 0.54));
+            if (branchProgress <= 0 || !crackLine.points[branch.start]) {
+              return;
+            }
+            const start = crackLine.points[branch.start];
+            const midLength = branch.length * 0.52 * branchProgress;
+            const endLength = branch.length * branchProgress;
+            context.strokeStyle = `rgba(32, 32, 32, ${0.34 * branchProgress})`;
+            context.lineWidth = branch.width;
+            roughnessContext.strokeStyle = `rgba(238, 238, 238, ${0.24 * branchProgress})`;
+            roughnessContext.lineWidth = branch.width * 1.6;
+            normalContext.strokeStyle = `rgba(94, 94, 218, ${0.22 * branchProgress})`;
+            normalContext.lineWidth = branch.width * 1.28;
+            aoContext.strokeStyle = `rgba(190, 190, 190, ${0.3 * branchProgress})`;
+            aoContext.lineWidth = branch.width * 1.45;
+            context.beginPath();
+            roughnessContext.beginPath();
+            normalContext.beginPath();
+            aoContext.beginPath();
+            context.moveTo(start.x, start.y);
+            roughnessContext.moveTo(start.x, start.y);
+            normalContext.moveTo(start.x, start.y);
+            aoContext.moveTo(start.x, start.y);
+            context.lineTo(
+              start.x + Math.cos(branch.direction + branch.bend) * midLength,
+              start.y + Math.sin(branch.direction + branch.bend) * midLength * 0.72,
+            );
+            roughnessContext.lineTo(
+              start.x + Math.cos(branch.direction + branch.bend) * midLength,
+              start.y + Math.sin(branch.direction + branch.bend) * midLength * 0.72,
+            );
+            normalContext.lineTo(
+              start.x + Math.cos(branch.direction + branch.bend) * midLength,
+              start.y + Math.sin(branch.direction + branch.bend) * midLength * 0.72,
+            );
+            aoContext.lineTo(
+              start.x + Math.cos(branch.direction + branch.bend) * midLength,
+              start.y + Math.sin(branch.direction + branch.bend) * midLength * 0.72,
+            );
+            context.lineTo(
+              start.x + Math.cos(branch.direction - branch.bend * 0.45) * endLength,
+              start.y + Math.sin(branch.direction - branch.bend * 0.45) * endLength * 0.72,
+            );
+            roughnessContext.lineTo(
+              start.x + Math.cos(branch.direction - branch.bend * 0.45) * endLength,
+              start.y + Math.sin(branch.direction - branch.bend * 0.45) * endLength * 0.72,
+            );
+            normalContext.lineTo(
+              start.x + Math.cos(branch.direction - branch.bend * 0.45) * endLength,
+              start.y + Math.sin(branch.direction - branch.bend * 0.45) * endLength * 0.72,
+            );
+            aoContext.lineTo(
+              start.x + Math.cos(branch.direction - branch.bend * 0.45) * endLength,
+              start.y + Math.sin(branch.direction - branch.bend * 0.45) * endLength * 0.72,
+            );
+            context.stroke();
+            roughnessContext.stroke();
+            normalContext.stroke();
+            aoContext.stroke();
+          });
+        });
+
+        context.restore();
+        roughnessContext.restore();
+        normalContext.restore();
+        aoContext.restore();
+
+        chips.forEach((chip) => {
+          const chipProgress = Math.min(1, Math.max(0, (progress - chip.delay) / 0.42));
+          if (chipProgress <= 0) {
+            return;
+          }
+          context.save();
+          roughnessContext.save();
+          normalContext.save();
+          aoContext.save();
+          context.translate(chip.x, chip.y);
+          roughnessContext.translate(chip.x, chip.y);
+          normalContext.translate(chip.x, chip.y);
+          aoContext.translate(chip.x, chip.y);
+          context.rotate(chip.rotation);
+          roughnessContext.rotate(chip.rotation);
+          normalContext.rotate(chip.rotation);
+          aoContext.rotate(chip.rotation);
+          context.fillStyle = `rgba(108, 108, 108, ${0.22 * chipProgress})`;
+          roughnessContext.fillStyle = `rgba(250, 250, 250, ${0.38 * chipProgress})`;
+          normalContext.fillStyle = `rgba(92, 92, 215, ${0.24 * chipProgress})`;
+          aoContext.fillStyle = `rgba(185, 185, 185, ${0.38 * chipProgress})`;
+          context.beginPath();
+          roughnessContext.beginPath();
+          normalContext.beginPath();
+          aoContext.beginPath();
+          context.moveTo(-chip.size, -chip.size * 0.34);
+          roughnessContext.moveTo(-chip.size, -chip.size * 0.34);
+          normalContext.moveTo(-chip.size, -chip.size * 0.34);
+          aoContext.moveTo(-chip.size, -chip.size * 0.34);
+          context.lineTo(chip.size * 0.72, -chip.size * 0.55);
+          roughnessContext.lineTo(chip.size * 0.72, -chip.size * 0.55);
+          normalContext.lineTo(chip.size * 0.72, -chip.size * 0.55);
+          aoContext.lineTo(chip.size * 0.72, -chip.size * 0.55);
+          context.lineTo(chip.size * 0.48, chip.size * 0.62);
+          roughnessContext.lineTo(chip.size * 0.48, chip.size * 0.62);
+          normalContext.lineTo(chip.size * 0.48, chip.size * 0.62);
+          aoContext.lineTo(chip.size * 0.48, chip.size * 0.62);
+          context.lineTo(-chip.size * 0.62, chip.size * 0.44);
+          roughnessContext.lineTo(-chip.size * 0.62, chip.size * 0.44);
+          normalContext.lineTo(-chip.size * 0.62, chip.size * 0.44);
+          aoContext.lineTo(-chip.size * 0.62, chip.size * 0.44);
+          context.closePath();
+          roughnessContext.closePath();
+          normalContext.closePath();
+          aoContext.closePath();
+          context.fill();
+          roughnessContext.fill();
+          normalContext.fill();
+          aoContext.fill();
+          context.fillStyle = `rgba(245, 245, 242, ${0.2 * chipProgress})`;
+          context.fillRect(-chip.size * 0.55, -chip.size * 0.18, chip.size * 0.85, chip.size * 0.18);
+          context.restore();
+          roughnessContext.restore();
+          normalContext.restore();
+          aoContext.restore();
+        });
+
+        texture.needsUpdate = true;
+        roughnessTexture.needsUpdate = true;
+        normalTexture.needsUpdate = true;
+        aoTexture.needsUpdate = true;
+      },
+    };
+  }
+
+  function applyCrackSurfaces(group, side) {
+    group.userData.crackSurfaces = [];
+    group.children.forEach((part, index) => {
+      if (!part.isMesh) {
+        return;
+      }
+
+      const surface = createCrackedStoneSurface(side, index + (side < 0 ? 10 : 40));
+      const material = part.material.clone();
+      material.map = surface.texture;
+      material.roughnessMap = surface.roughnessTexture;
+      material.normalMap = surface.normalTexture;
+      material.normalScale = new THREE.Vector2(0.28, 0.28);
+      material.aoMap = surface.aoTexture;
+      material.aoMapIntensity = 0.78;
+      material.bumpMap = surface.texture;
+      material.bumpScale = 0.025;
+      part.material = material;
+      group.userData.crackSurfaces.push(surface);
+    });
+  }
+
+  function createPart(width, height, x, y, rotationZ = 0) {
+    const geometry = new THREE.ExtrudeGeometry(createRoundedBar(width, height, Math.min(width, height) * 0.2), {
+      depth: 0.74,
+      bevelEnabled: true,
+      bevelThickness: 0.105,
+      bevelSize: 0.105,
+      bevelSegments: 12,
+      curveSegments: 14,
+    });
+    geometry.center();
+    geometry.computeVertexNormals();
+    geometry.setAttribute("uv2", geometry.attributes.uv.clone());
+
+    const material = new THREE.MeshStandardMaterial({
+      color: 0xf2f2f2,
+      roughness: 0.94,
+      metalness: 0,
+      bumpMap: whiteStoneTexture,
+      bumpScale: 0.018,
+      roughnessMap: whiteStoneTexture,
+      transparent: true,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(x, y, 0);
+    mesh.rotation.z = rotationZ;
+    return mesh;
+  }
+
+  function createKoreanConsonant(type) {
+    const group = new THREE.Group();
+
+    if (type === "kieuk") {
+      group.add(createPart(3.92, 0.68, -0.16, 1.08, 0.065));
+      group.add(createPart(2.82, 0.66, -0.48, -0.18, 0.065));
+      group.add(createPart(0.72, 2.62, 1.32, -0.35, 0.065));
+      group.add(createPart(0.98, 0.48, 1.33, -1.68, 0.065));
+      group.rotation.set(0.18, -0.34, -0.075);
+    } else {
+      group.add(createPart(0.72, 3.46, -1.55, -0.02, -0.055));
+      group.add(createPart(3.74, 0.68, 0.06, 1.32, -0.075));
+      group.add(createPart(3.02, 0.66, 0.32, -0.02, -0.035));
+      group.add(createPart(3.12, 0.66, 0.42, -1.36, -0.015));
+      group.rotation.set(0.18, 0.31, 0.075);
+    }
+
+    applyCrackSurfaces(group, type === "kieuk" ? -1 : 1);
+    group.scale.setScalar(window.matchMedia("(max-width: 768px)").matches ? 0.76 : 1.08);
+    return group;
+  }
+
+  function createCollisionController(localScene, leftGroup, rightGroup) {
+    const fragments = [];
+    const sourceParts = [...leftGroup.children, ...rightGroup.children].filter((part) => part.isMesh);
+
+    sourceParts.forEach((part, partIndex) => {
+      const box = new THREE.Box3().setFromObject(part);
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(center);
+
+      for (let index = 0; index < 9; index += 1) {
+        const side = partIndex < leftGroup.children.length ? -1 : 1;
+        const angle = (partIndex * 9 + index) * 0.91;
+        const shardScale = 0.12 + (index % 4) * 0.052;
+        const mesh = new THREE.Mesh(
+          index % 3 === 0
+            ? new THREE.TetrahedronGeometry(Math.max(0.18, Math.min(size.x, size.y) * (0.26 + index * 0.018)), 0)
+            : new THREE.BoxGeometry(
+                Math.max(0.12, size.x * shardScale),
+                Math.max(0.08, size.y * (0.14 + (index % 5) * 0.04)),
+                0.58 + (index % 2) * 0.18,
+              ),
+          part.material.clone(),
+        );
+        mesh.userData.origin = center
+          .clone()
+          .add(new THREE.Vector3((Math.random() - 0.5) * size.x * 0.62, (Math.random() - 0.5) * size.y * 0.72, 0));
+        mesh.userData.velocity = new THREE.Vector3(
+          side * (1.85 + index * 0.34) + Math.cos(angle) * 1.65,
+          Math.sin(angle * 1.45) * 2.05 + (index % 4) * 0.38,
+          (Math.random() - 0.64) * (1.25 + index * 0.16),
+        );
+        mesh.userData.spin = new THREE.Vector3(0.18 + index * 0.045, 0.14 + index * 0.04, 0.22 + index * 0.052);
+        mesh.visible = false;
+        localScene.add(mesh);
+        fragments.push(mesh);
+      }
+    });
+
+    const particleCount = window.matchMedia("(max-width: 768px)").matches ? 760 : 1900;
+    const positions = new Float32Array(particleCount * 3);
+    const velocities = new Float32Array(particleCount * 3);
+
+    for (let index = 0; index < particleCount; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = Math.random() * 0.34;
+      positions[index * 3] = Math.cos(angle) * radius;
+      positions[index * 3 + 1] = Math.sin(angle) * radius * 0.5;
+      positions[index * 3 + 2] = (Math.random() - 0.5) * 0.3;
+
+      const power = 1.05 + Math.random() * 3.55;
+      velocities[index * 3] = Math.cos(angle) * power;
+      velocities[index * 3 + 1] = Math.sin(angle) * power * 0.92 + Math.random() * 0.95;
+      velocities[index * 3 + 2] = (Math.random() - 0.5) * power * 1.15;
+    }
+
+    const particleGeometry = new THREE.BufferGeometry();
+    particleGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const particleMaterial = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      uniforms: {
+        uOpacity: { value: 0 },
+        uSize: { value: window.matchMedia("(max-width: 768px)").matches ? 0.045 : 0.032 },
+      },
+      vertexShader: `
+        uniform float uSize;
+        void main() {
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mvPosition;
+          gl_PointSize = uSize * (210.0 / -mvPosition.z);
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        uniform float uOpacity;
+        void main() {
+          float d = length(gl_PointCoord - 0.5);
+          float alpha = smoothstep(0.5, 0.06, d) * uOpacity;
+          gl_FragColor = vec4(vec3(0.93), alpha);
+        }
+      `,
+    });
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    localScene.add(particles);
+
+    const shockwave = new THREE.Mesh(
+      new THREE.RingGeometry(0.55, 0.6, 160),
+      new THREE.MeshBasicMaterial({ color: 0xf3f3f3, transparent: true, opacity: 0, side: THREE.DoubleSide }),
+    );
+    shockwave.rotation.x = Math.PI / 2;
+    localScene.add(shockwave);
+
+    const streakGeometry = new THREE.BufferGeometry();
+    const streakMaterial = new THREE.LineBasicMaterial({ color: 0xeeeeee, transparent: true, opacity: 0 });
+    const streaks = new THREE.LineSegments(streakGeometry, streakMaterial);
+    localScene.add(streaks);
+
+    return {
+      update(progress, time) {
+        const destruction = smoothProgress(progress, 0.62, 0.96);
+        const impact = Math.exp(-Math.pow((progress - 0.58) / 0.045, 2));
+        const crack = smoothProgress(progress, 0.54, 0.66);
+        const burst = smoothProgress(progress, 0.56, 0.9);
+        const surfaceCrack = Math.max(impact * 0.82, smoothProgress(progress, 0.58, 0.78));
+
+        [...leftGroup.userData.crackSurfaces, ...rightGroup.userData.crackSurfaces].forEach((surface) => {
+          surface.update(surfaceCrack);
+        });
+
+        fragments.forEach((fragment) => {
+          fragment.visible = burst > 0.01;
+          fragment.position.copy(fragment.userData.origin).addScaledVector(fragment.userData.velocity, burst * 4.25);
+          fragment.position.y -= burst * burst * 2.45;
+          fragment.rotation.x += fragment.userData.spin.x * (burst + impact * 0.8);
+          fragment.rotation.y += fragment.userData.spin.y * (burst + impact * 0.8);
+          fragment.rotation.z += fragment.userData.spin.z * (burst + impact * 0.8);
+          fragment.material.opacity = 1 - burst * 0.96;
+        });
+
+        for (let index = 0; index < particleCount; index += 1) {
+          positions[index * 3] = velocities[index * 3] * burst * 3.4 + Math.sin(time * 2 + index) * 0.04 * impact;
+          positions[index * 3 + 1] =
+            velocities[index * 3 + 1] * burst * 2.55 - burst * burst * 1.15;
+          positions[index * 3 + 2] = velocities[index * 3 + 2] * burst;
+        }
+        particleGeometry.attributes.position.needsUpdate = true;
+        particleMaterial.uniforms.uOpacity.value = impact * 0.9 + burst * (1 - burst) * 0.7;
+
+        shockwave.material.opacity = impact * 0.82;
+        shockwave.scale.setScalar(0.5 + impact * 7.4 + burst * 3.6);
+
+        const streakPositions = new Float32Array(86 * 6);
+        for (let index = 0; index < 86; index += 1) {
+          const x = (index / 85 - 0.5) * 6.8;
+          const height = (0.38 + (index % 11) * 0.2 + impact * 0.9) * crack;
+          streakPositions[index * 6] = x;
+          streakPositions[index * 6 + 1] = -height;
+          streakPositions[index * 6 + 2] = 0.15;
+          streakPositions[index * 6 + 3] = x + Math.sin(index) * 0.02;
+          streakPositions[index * 6 + 4] = height;
+          streakPositions[index * 6 + 5] = 0.15;
+        }
+        streakGeometry.setAttribute("position", new THREE.BufferAttribute(streakPositions, 3));
+        streakMaterial.opacity = (impact * 0.36 + crack * 0.7) * (1 - burst * 0.58);
+
+      },
+    };
+  }
+
+  function createSoundWaveRenderer(localScene) {
+    const geometry = new THREE.BufferGeometry();
+    const material = new THREE.LineBasicMaterial({ color: 0xe8e8e8, transparent: true, opacity: 0.26 });
+    const lines = new THREE.LineSegments(geometry, material);
+    lines.position.z = -0.58;
+    localScene.add(lines);
+
+    return {
+      update(progress, time) {
+        const count = 96;
+        const positions = new Float32Array(count * 6);
+        const approach = smoothProgress(progress, 0.08, 0.54);
+        const impact = Math.exp(-Math.pow((progress - 0.58) / 0.055, 2));
+        const fade = smoothProgress(progress, 0.72, 0.98);
+        const amplitude = (0.08 + approach * 0.28 + impact * 2.1) * (1 - fade * 0.72);
+
+        for (let index = 0; index < count; index += 1) {
+          const x = (index / (count - 1) - 0.5) * 13.2;
+          const falloff = 1 - Math.min(1, Math.abs(x) / 6.8);
+          const height = Math.abs(Math.sin(index * 0.55 + time * 4.8)) * amplitude * falloff;
+          positions[index * 6] = x;
+          positions[index * 6 + 1] = -height;
+          positions[index * 6 + 2] = -0.58;
+          positions[index * 6 + 3] = x;
+          positions[index * 6 + 4] = height;
+          positions[index * 6 + 5] = -0.58;
+        }
+
+        geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+        material.opacity = (0.16 + impact * 0.48) * (1 - fade * 0.6);
+      },
+    };
+  }
+
+  function createScrollTimeline() {
+    const state = { progress: 0 };
+
+    if (window.ScrollTrigger && gsapInstance) {
+      gsapInstance.timeline({
+        scrollTrigger: {
+          trigger: soundInteraction,
+          start: "top top",
+          end: "bottom bottom",
+          scrub: true,
+          onUpdate: (self) => {
+            state.progress = self.progress;
+          },
+        },
+      });
+    }
+
+    return {
+      get progress() {
+        if (window.ScrollTrigger) {
+          return state.progress;
+        }
+        const rect = soundInteraction.getBoundingClientRect();
+        const distance = Math.max(1, soundInteraction.offsetHeight - window.innerHeight);
+        return Math.min(1, Math.max(0, -rect.top / distance));
+      },
+    };
+  }
+
+  function resize() {
+    const width = Math.max(1, root.clientWidth);
+    const height = Math.max(1, root.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.matchMedia("(max-width: 768px)").matches ? 1.25 : 1.75));
+    renderer.setSize(width, height, false);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+  }
+
+  function render(timeSeconds) {
+    const progress = scrollController.progress;
+    const approach = smoothProgress(progress, 0.08, 0.52);
+    const anticipation = smoothProgress(progress, 0.5, 0.58);
+    const destruction = smoothProgress(progress, 0.62, 0.96);
+    const impact = Math.exp(-Math.pow((progress - 0.58) / 0.045, 2));
+    const shake = (anticipation * 0.075 + impact * 0.035) * Math.sin(timeSeconds * (18 + anticipation * 72));
+
+    root.classList.toggle("is-active", progress > 0.01 && progress < 0.995);
+
+    leftLetter.position.set(-9 + approach * 6.9 + shake, Math.sin(timeSeconds * 1.4) * 0.08, 0);
+    rightLetter.position.set(9 - approach * 6.9 - shake, Math.cos(timeSeconds * 1.25) * 0.07, 0);
+    leftLetter.rotation.z = -0.18 + approach * 0.12 + shake;
+    rightLetter.rotation.z = 0.18 - approach * 0.12 - shake;
+    leftLetter.rotation.y = -0.28 + anticipation * 0.08;
+    rightLetter.rotation.y = 0.24 - anticipation * 0.08;
+
+    const intactOpacity = 1 - destruction;
+    [leftLetter, rightLetter].forEach((letter) => {
+      letter.traverse((child) => {
+        if (child.isMesh) {
+          child.visible = intactOpacity > 0.02;
+          child.material.opacity = intactOpacity;
+        }
+      });
+    });
+
+    camera.position.z = 15.5 - anticipation * 1.2 + destruction * 0.35;
+    camera.position.x = Math.sin(timeSeconds * 36) * anticipation * 0.03;
+    collision.update(progress, timeSeconds);
+    waveform.update(progress, timeSeconds);
+    renderer.render(scene, camera);
+  }
+
+  function lazyInit() {
+    if (!("IntersectionObserver" in window)) {
+      init();
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
+        observer.disconnect();
+        try {
+          init();
+        } catch (error) {
+          console.error("Sound collision interaction failed to start.", error);
+        }
+      },
+      { rootMargin: "80% 0px" },
+    );
+    observer.observe(root);
+  }
+
+  lazyInit();
+}
+
 function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
   if (!container) {
     return;
@@ -99,6 +974,7 @@ function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
   const resolution = new THREE.Vector2(1, 1);
   const imageSize = new THREE.Vector2(1920, 1080);
   const coverPosition = new THREE.Vector2(0.5, options.coverPositionY ?? 0.5);
+  const widthFit = Boolean(options.widthFit);
   const texelSize = new THREE.Vector2(1, 1);
   let pointerInside = 0;
   let renderTargetA;
@@ -217,6 +1093,7 @@ function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
       uResolution: { value: resolution },
       uImageSize: { value: imageSize },
       uCoverPosition: { value: coverPosition },
+      uWidthFit: { value: widthFit ? 1 : 0 },
       uTexel: { value: texelSize },
       uPointer: { value: pointer },
       uVelocity: { value: velocity },
@@ -235,6 +1112,7 @@ function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
       uniform vec2 uResolution;
       uniform vec2 uImageSize;
       uniform vec2 uCoverPosition;
+      uniform float uWidthFit;
       uniform vec2 uTexel;
       uniform vec2 uPointer;
       uniform vec2 uVelocity;
@@ -294,6 +1172,12 @@ function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
 
       void main() {
         vec2 imageUv = coverUv(vUv);
+        if (uWidthFit > 0.5) {
+          float imageAspect = uImageSize.x / uImageSize.y;
+          float visibleHeight = clamp((uResolution.y * imageAspect) / uResolution.x, 0.0, 1.0);
+          imageUv = vec2(vUv.x, mix(1.0 - visibleHeight, 1.0, vUv.y));
+        }
+
         float mask = texture2D(uMask, vUv).r;
         float maskLeft = texture2D(uMask, vUv - vec2(uTexel.x, 0.0)).r;
         float maskRight = texture2D(uMask, vUv + vec2(uTexel.x, 0.0)).r;
@@ -440,6 +1324,35 @@ function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
 }
 
 initHangulReveal(heroWebgl, "./assets/images/hero/hangeul-base.png", "./assets/images/hero/hangeul-reveal.png");
+if (storyPageIntro) {
+  const storyIntroWebgl = document.createElement("div");
+  storyIntroWebgl.className = "story-intro-webgl";
+  storyIntroWebgl.setAttribute("aria-hidden", "true");
+  storyPageIntro.prepend(storyIntroWebgl);
+  initHangulReveal(
+    storyIntroWebgl,
+    "./assets/images/story/story-bg-flat.webp",
+    "./assets/images/story/story-bg-base.webp",
+    { widthFit: true },
+  );
+}
+if (soundInteractionSticky) {
+  const soundInteractionWebgl = document.createElement("div");
+  soundInteractionWebgl.className = "sound-interaction-webgl";
+  soundInteractionWebgl.setAttribute("aria-hidden", "true");
+  soundInteractionSticky.prepend(soundInteractionWebgl);
+  initHangulReveal(
+    soundInteractionWebgl,
+    "./assets/images/story/story-bg-flat.webp",
+    "./assets/images/story/story-bg-base.webp",
+    { widthFit: true },
+  );
+  try {
+    initSoundCollisionExperience();
+  } catch (error) {
+    console.error("Sound collision interaction failed to initialize.", error);
+  }
+}
 initHangulReveal(
   kingPeopleWebgl,
   "./assets/images/hero/hangeul-base.png",
