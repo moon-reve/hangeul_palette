@@ -895,10 +895,15 @@ a {
   pointer-events: auto;
 }
 
+.section-king-heart {
+  position: relative;
+  height: 100svh;
+  overflow: hidden;
+  background: #e1e1e1;
+}
+
 .king-people-scene-heart {
-  z-index: 2;
-  transform: translate3d(0, 100%, 0);
-  transition: opacity 520ms ease;
+  z-index: 1;
 }
 
 .king-people-scene-video {

@@ -5,7 +5,6 @@ const initialTitle = document.querySelector(".hero-title-initial");
 const nextTitle = document.querySelector(".hero-title-next");
 const kingPeopleSection = document.querySelector(".section-king-people");
 const kingPeopleVideoScene = document.querySelector(".king-people-scene-video");
-const kingPeopleHeartScene = document.querySelector(".king-people-scene-heart");
 const kingPeopleVideoFrame = document.querySelector(".king-people-video-frame");
 const heroWebgl = document.querySelector(".hero-webgl");
 const kingPeopleWebgl = document.querySelector(".king-people-webgl");
@@ -41,7 +40,7 @@ window.addEventListener("scroll", setHeroTitleStep, { passive: true });
 window.addEventListener("resize", setHeroTitleStep);
 
 function setKingPeopleScene() {
-  if (!kingPeopleSection || !kingPeopleVideoScene || !kingPeopleHeartScene || !kingPeopleVideoFrame) {
+  if (!kingPeopleSection || !kingPeopleVideoScene || !kingPeopleVideoFrame) {
     return;
   }
 
@@ -49,18 +48,12 @@ function setKingPeopleScene() {
   const scrollableDistance = Math.max(1, kingPeopleSection.offsetHeight - window.innerHeight);
   const progress = Math.min(1, Math.max(0, -rect.top / scrollableDistance));
   const videoProgress = smoothProgress(progress, 0.05, 0.58);
-  const heartProgress = smoothProgress(progress, 0.58, 0.88);
   const baseWidth = Math.max(1, kingPeopleVideoFrame.offsetWidth);
   const baseHeight = Math.max(1, kingPeopleVideoFrame.offsetHeight);
   const coverScale = Math.max(window.innerWidth / baseWidth, window.innerHeight / baseHeight);
   const videoScale = 1 + (coverScale - 1) * videoProgress;
-  const showHeartScene = heartProgress > 0;
 
-  kingPeopleVideoScene.classList.toggle("is-active", heartProgress < 1);
-  kingPeopleHeartScene.classList.toggle("is-active", showHeartScene);
   kingPeopleVideoFrame.style.transform = `scale(${videoScale})`;
-  kingPeopleHeartScene.style.transform = `translate3d(0, ${100 * (1 - heartProgress)}%, 0)`;
-  kingPeopleHeartScene.style.opacity = `${heartProgress}`;
 }
 
 setKingPeopleScene();
