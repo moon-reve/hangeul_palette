@@ -559,11 +559,62 @@ a {
 
 .story-page-intro {
   position: relative;
+  height: 100svh;
   min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.story-intro-webgl {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #e1e1e1;
+  pointer-events: none;
+}
+
+.sound-interaction-webgl {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #e1e1e1;
+  pointer-events: none;
+}
+
+.sound-collision-webgl {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  height: 100%;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sound-collision-webgl.is-active {
+  opacity: 1;
+}
+
+.story-intro-webgl canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sound-interaction-webgl canvas,
+.sound-collision-webgl canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .story-text-panel {
   position: absolute;
+  z-index: 1;
   left: 50%;
   width: min(38.44vw, 738px);
   color: #000;
@@ -637,18 +688,37 @@ a {
 .sound-interaction {
   position: relative;
   min-height: 300svh;
+  z-index: 2;
 }
 
 .sound-interaction-sticky {
   position: sticky;
   top: 0;
+  height: 100svh;
   min-height: 100svh;
   overflow: hidden;
+  isolation: isolate;
+}
+
+.sound-interaction.is-pinned .sound-interaction-sticky {
+  position: fixed;
+  right: 0;
+  left: 0;
+  z-index: 4;
+}
+
+.sound-interaction.is-released .sound-interaction-sticky {
+  position: absolute;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
 }
 
 .sound-stage {
   position: absolute;
   inset: 0;
+  z-index: 1;
   display: grid;
   place-items: start center;
   padding-top: clamp(64px, 9.26vh, 100px);
@@ -656,7 +726,7 @@ a {
   pointer-events: none;
 }
 
-.sound-stage:first-child {
+.sound-stage-plosive {
   opacity: 1;
 }
 
@@ -900,6 +970,23 @@ a {
   height: 100svh;
   overflow: hidden;
   background: #e1e1e1;
+}
+
+.section-king-heart::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  z-index: 3;
+  height: min(30vh, 300px);
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(225, 225, 225, 0),
+    rgba(225, 225, 225, 0.82) 58%,
+    #e1e1e1
+  );
 }
 
 .king-people-scene-heart {
