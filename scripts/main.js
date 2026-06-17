@@ -79,12 +79,13 @@ function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   const geometry = new THREE.PlaneGeometry(2, 2);
   const loader = new THREE.TextureLoader();
-  const baseTexture = loader.load(baseSrc);
-  const revealTexture = loader.load(revealSrc, (texture) => {
+  const setLoadedImageSize = (texture) => {
     if (texture.image) {
       imageSize.set(texture.image.width || 1920, texture.image.height || 1080);
     }
-  });
+  };
+  const baseTexture = loader.load(baseSrc, setLoadedImageSize);
+  const revealTexture = loader.load(revealSrc, setLoadedImageSize);
 
   [baseTexture, revealTexture].forEach((texture) => {
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -244,20 +245,20 @@ function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
       vec2 coverUv(vec2 uv) {
         float screenAspect = uResolution.x / uResolution.y;
         float imageAspect = uImageSize.x / uImageSize.y;
-        vec2 scale = vec2(1.0);
+        vec2 visibleSize = vec2(1.0);
 
         if (screenAspect > imageAspect) {
-          scale.y = screenAspect / imageAspect;
+          visibleSize.y = imageAspect / screenAspect;
         } else {
-          scale.x = imageAspect / screenAspect;
+          visibleSize.x = screenAspect / imageAspect;
         }
 
         vec2 offset = vec2(
-          (1.0 - scale.x) * uCoverPosition.x,
-          (1.0 - scale.y) * (1.0 - uCoverPosition.y)
+          (1.0 - visibleSize.x) * uCoverPosition.x,
+          (1.0 - visibleSize.y) * (1.0 - uCoverPosition.y)
         );
 
-        return uv * scale + offset;
+        return uv * visibleSize + offset;
       }
 
       float luminance(vec3 color) {
