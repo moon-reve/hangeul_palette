@@ -67,8 +67,8 @@ a {
 
 .site-menu {
   position: fixed;
-  top: 8.6vh;
-  right: 10.15vw;
+  top: 5vh;
+  right: 5vw;
   z-index: 100;
   font-size: clamp(13px, 0.78vw, 15px);
   font-weight: 600;
