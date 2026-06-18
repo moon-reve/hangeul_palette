@@ -1669,5 +1669,83 @@ initHangulReveal(
   "./assets/images/king-people/king-people-bg-02.webp",
 );
 
+
+// Record 3D 원기둥 카루셀 (Codrops 구조)
+(function initRecordCarousel() {
+  const scenes = document.querySelectorAll(".scene-wrapper .scene");
+  if (!scenes.length) return;
+
+  function setupCells(scene) {
+    const carousel = scene.querySelector(".carousel");
+    const cells    = carousel.querySelectorAll(".carousel__cell");
+    const radius   = parseFloat(scene.dataset.radius) || 400;
+    const step     = 360 / cells.length;
+    cells.forEach((cell, i) => {
+      cell.style.transform = `rotateY(${i * step}deg) translateZ(${radius}px)`;
+    });
+  }
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  // 스크롤과 완전 분리된 회전 상태
+  const rot = Array.from(scenes).map(() => ({ current: 0, target: 0 }));
+  let rafId = null;
+
+  function render() {
+    let needs = false;
+    scenes.forEach((scene, i) => {
+      const r = rot[i];
+      r.current = lerp(r.current, r.target, 0.07);
+      scene.querySelector(".carousel").style.transform = `rotateY(${-360 * r.current}deg)`;
+      if (Math.abs(r.current - r.target) > 0.0003) needs = true;
+    });
+    rafId = needs ? requestAnimationFrame(render) : null;
+  }
+
+  // 각 scene이 viewport 중앙에 얼마나 가까운지 (0=멀다 1=정중앙)
+  function getActiveFactor(scene) {
+    const rect  = scene.getBoundingClientRect();
+    if (rect.bottom < 0 || rect.top > window.innerHeight) return 0;
+    const center = rect.top + rect.height / 2;
+    const dist   = Math.abs(center - window.innerHeight / 2);
+    const zone   = window.innerHeight * 0.55;
+    return Math.max(0, 1 - dist / zone);
+  }
+
+  let vScrollY = window.scrollY;
+
+  window.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const delta = e.deltaY;
+
+    let maxFactor = 0;
+    scenes.forEach((scene, i) => {
+      const rect = scene.getBoundingClientRect();
+      const inView = rect.bottom > 0 && rect.top < window.innerHeight;
+      if (!inView) return;
+
+      const f = getActiveFactor(scene);
+      maxFactor = Math.max(maxFactor, f);
+      // 화면에 조금이라도 보이면 회전 시작, 중앙 가까울수록 빨라짐
+      const speed = 0.00010 + 0.00022 * f * 1.5;
+      rot[i].target += delta * speed;
+    });
+
+    // 중앙 가까울수록 스크롤 감속 (최소 12% 속도)
+    const scrollMult = 1 - maxFactor * 0.88;
+    vScrollY = Math.max(
+      0,
+      Math.min(document.documentElement.scrollHeight - window.innerHeight, vScrollY + delta * scrollMult)
+    );
+    window.scrollTo({ top: vScrollY, behavior: "instant" });
+
+    if (!rafId) rafId = requestAnimationFrame(render);
+  }, { passive: false });
+
+  scenes.forEach(setupCells);
+  render();
+})();
+
 initInkOverlay(inkOverlay, siteMenu);
+
 
