@@ -609,7 +609,39 @@ a {
 }
 
 .story-page-record {
-  min-height: auto;
+  min-height: 200svh;
+}
+
+.record-cylinder-clip {
+  position: relative;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.record-cylinder-stage {
+  position: absolute;
+  inset: 0;
+  perspective: 800px;
+  perspective-origin: 50% 50%;
+}
+
+.record-cylinder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-style: preserve-3d;
+}
+
+.record-cylinder-item {
+  position: absolute;
+  width: clamp(220px, 20vw, 280px);
+}
+
+.record-cylinder-item img {
+  display: block;
+  width: 100%;
+  height: auto;
+  mix-blend-mode: multiply;
 }
 
 /* scene-wrapper: 텍스트 패널 아래 바로 이어짐 */
