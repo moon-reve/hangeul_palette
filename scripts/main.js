@@ -12,6 +12,8 @@ const kingPeopleHeartWebgl = document.querySelector(".king-people-heart-webgl");
 const storyPageIntro = document.querySelector(".story-page-intro");
 const soundInteraction = document.querySelector(".sound-interaction");
 const soundInteractionSticky = document.querySelector(".sound-interaction-sticky");
+const inkOverlay = document.querySelector(".ink-overlay");
+const siteMenu = document.querySelector(".site-menu");
 const gsapInstance = window.gsap || null;
 
 
@@ -936,6 +938,174 @@ function initSoundCollisionExperience() {
   lazyInit();
 }
 
+function initInkOverlay(container, menuEl) {
+  if (!container || !menuEl) return;
+
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: true,
+    powerPreference: "high-performance",
+  });
+  renderer.setClearColor(0x000000, 0);
+  container.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const geometry = new THREE.PlaneGeometry(2, 2);
+  const resolution = new THREE.Vector2(1, 1);
+
+  let progress = 0;
+  let targetProgress = 0;
+  let lastTime = performance.now();
+
+  const material = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: {
+      uResolution: { value: resolution },
+      uProgress: { value: 0 },
+      uTime: { value: 0 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = vec4(position.xy, 0.0, 1.0);
+      }
+    `,
+    fragmentShader: `
+      precision highp float;
+      varying vec2 vUv;
+      uniform vec2 uResolution;
+      uniform float uProgress;
+      uniform float uTime;
+
+      float hash(vec2 p) {
+        p = fract(p * vec2(234.21, 83.17));
+        p += dot(p, p + 19.19);
+        return fract(p.x * p.y);
+      }
+
+      float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        vec2 u = f * f * (3.0 - 2.0 * f);
+        return mix(
+          mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
+          mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+          u.y
+        );
+      }
+
+      float fbm(vec2 p) {
+        float v = 0.0;
+        float a = 0.5;
+        for (int i = 0; i < 6; i++) {
+          v += noise(p) * a;
+          p = p * 2.1 + 7.3;
+          a *= 0.5;
+        }
+        return v;
+      }
+
+      void main() {
+        if (uProgress <= 0.001) {
+          gl_FragColor = vec4(0.0);
+          return;
+        }
+
+        vec2 p = vUv - vec2(1.0, 1.0);
+        p.x *= uResolution.x / uResolution.y;
+
+        float dist = length(p);
+        float t = uTime * 0.02;
+        float radius = uProgress * 2.0;
+
+        vec2 dir = normalize(p + 0.001);
+
+        // 농묵: 작고 둥근 핵심
+        float cL = fbm(dir * 3.5 + t * 0.20 + 16.2) * 0.20;
+        float rC = radius * (0.22 + cL);
+        float blobC = 1.0 - smoothstep(rC * 0.94, rC * 1.40, dist);
+
+        // 중묵: 중간 로브
+        float bL1 = fbm(dir * 2.2 + t * 0.18 + 8.5) * 0.28;
+        float bL2 = fbm(dir * 6.0 - t * 0.14 + 12.0) * 0.08;
+        float rB = radius * (0.38 + bL1 + bL2);
+        float blobB = 1.0 - smoothstep(rB * 0.94, rB * 1.25, dist);
+
+        // 담묵: 크고 불규칙한 외곽
+        float aL1 = fbm(dir * 1.7 + t * 0.16) * 0.34;
+        float aL2 = fbm(dir * 4.8 - t * 0.13 + 2.3) * 0.10;
+        float aL3 = fbm(dir * 10.5 + t * 0.26 + 5.2) * 0.03;
+        float rA = radius * (0.52 + aL1 + aL2 + aL3);
+        float blobA = 1.0 - smoothstep(rA * 0.50, rA, dist);
+
+        // 외곽 경계 텍스처
+        float edgeDist = max(0.0, dist - rA * 0.88);
+        float edgeZone = 1.0 - smoothstep(0.0, radius * 0.07, edgeDist);
+        float lumpN = fbm(p * 7.0 + t * 0.22);
+        blobA = max(blobA, step(0.58, lumpN) * edgeZone * 0.82);
+
+        // 안쪽 레이어 클립
+        blobB = min(blobB, blobA);
+        blobC = min(blobC, blobA);
+
+        float alpha = max(blobA * 0.26, max(blobB * 0.62, blobC * 0.97));
+        alpha = clamp(alpha, 0.0, 1.0);
+
+        vec3 inkColor = vec3(0.025);
+        gl_FragColor = vec4(inkColor, alpha);
+      }
+    `,
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+
+  function resize() {
+    const w = Math.max(1, container.clientWidth);
+    const h = Math.max(1, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(w, h, false);
+    resolution.set(w, h);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+
+  menuEl.addEventListener("mouseenter", () => {
+    targetProgress = 0.6;
+    menuEl.classList.add("ink-active");
+  });
+
+  menuEl.addEventListener("mouseleave", () => {
+    targetProgress = 0;
+  });
+
+  function render(now) {
+    const delta = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+
+    const speed = targetProgress > progress ? 3.0 : 1.5;
+    progress += (targetProgress - progress) * Math.min(1.0, delta * speed);
+
+    if (targetProgress === 0 && progress < 0.02) {
+      menuEl.classList.remove("ink-active");
+    }
+
+    if (progress > 0.001) {
+      material.uniforms.uProgress.value = progress;
+      material.uniforms.uTime.value = now * 0.001;
+      renderer.render(scene, camera);
+    }
+
+    requestAnimationFrame(render);
+  }
+
+  requestAnimationFrame(render);
+}
+
 function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
   if (!container) {
     return;
@@ -1365,4 +1535,6 @@ initHangulReveal(
   "./assets/images/king-people/king-people-bg-02.webp",
   "./assets/images/king-people/king-people-bg-02.webp",
 );
+
+initInkOverlay(inkOverlay, siteMenu);
 
