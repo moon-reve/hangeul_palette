@@ -1047,9 +1047,9 @@ function initInkOverlay(container, menuEl) {
 
         float alpha = max(blobA * 0.26, max(blobB * 0.62, blobC * 0.97));
 
-        // 최대 반경 밖은 완전 투명 — 끊어진 얼룩 방지
-        float hardCut = 1.0 - step(rA * 1.05, dist);
-        alpha *= hardCut;
+        // 코너에서 일정 반경 밖은 균일하게 페이드 — 방향 무관하므로 끊어진 얼룩 원천 차단
+        float globalFade = 1.0 - smoothstep(radius * 0.72, radius * 0.92, dist);
+        alpha *= globalFade;
         alpha = clamp(alpha, 0.0, 1.0);
 
         vec3 inkColor = vec3(0.025);
