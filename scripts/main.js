@@ -103,13 +103,20 @@ function setKingPeopleScene() {
   const rect = kingPeopleSection.getBoundingClientRect();
   const scrollableDistance = Math.max(1, kingPeopleSection.offsetHeight - window.innerHeight);
   const progress = Math.min(1, Math.max(0, -rect.top / scrollableDistance));
-  const videoProgress = smoothProgress(progress, 0.05, 0.58);
-  const baseWidth = Math.max(1, kingPeopleVideoFrame.offsetWidth);
-  const baseHeight = Math.max(1, kingPeopleVideoFrame.offsetHeight);
-  const coverScale = Math.max(window.innerWidth / baseWidth, window.innerHeight / baseHeight);
-  const videoScale = 1 + (coverScale - 1) * videoProgress;
+  const maskProgress = smoothProgress(progress, 0.02, 0.82);
+  const videoOpacity = smoothProgress(progress, 0.25, 0.42);
+  const copyProgress = smoothProgress(progress, 0.84, 0.96);
+  const frameFillOpacity = Math.max(0, Math.min(0.38, maskProgress * (1 - videoOpacity) * 0.38));
+  const videoMaskSize = 1 + maskProgress * 99;
+  const videoOffset = (1 - videoOpacity) * 5;
+  const copyOffset = (1 - copyProgress) * 34;
 
-  kingPeopleVideoFrame.style.transform = `scale(${videoScale})`;
+  kingPeopleSection.style.setProperty("--king-video-mask-size", `${videoMaskSize.toFixed(2)}%`);
+  kingPeopleSection.style.setProperty("--king-frame-fill-opacity", frameFillOpacity.toFixed(3));
+  kingPeopleSection.style.setProperty("--king-video-opacity", videoOpacity.toFixed(3));
+  kingPeopleSection.style.setProperty("--king-video-offset", `${videoOffset.toFixed(2)}svh`);
+  kingPeopleSection.style.setProperty("--king-video-copy-opacity", copyProgress.toFixed(3));
+  kingPeopleSection.style.setProperty("--king-video-copy-offset", `${copyOffset.toFixed(2)}px`);
 }
 
 setKingPeopleScene();
@@ -1670,4 +1677,3 @@ initHangulReveal(
 );
 
 initInkOverlay(inkOverlay, siteMenu);
-
