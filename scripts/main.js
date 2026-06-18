@@ -105,11 +105,11 @@ function setKingPeopleScene() {
   const progress = Math.min(1, Math.max(0, -rect.top / scrollableDistance));
   const maskProgress = smoothProgress(progress, 0.02, 0.82);
   const videoOpacity = smoothProgress(progress, 0.25, 0.42);
-  const copyProgress = smoothProgress(progress, 0.84, 0.96);
+  const copyProgress = smoothProgress(progress, 0.78, 0.98);
   const frameFillOpacity = Math.max(0, Math.min(0.38, maskProgress * (1 - videoOpacity) * 0.38));
   const videoMaskSize = 1 + maskProgress * 99;
   const videoOffset = (1 - videoOpacity) * 5;
-  const copyOffset = (1 - copyProgress) * 34;
+  const copyOffset = (1 - copyProgress) * 18;
 
   kingPeopleSection.style.setProperty("--king-video-mask-size", `${videoMaskSize.toFixed(2)}%`);
   kingPeopleSection.style.setProperty("--king-frame-fill-opacity", frameFillOpacity.toFixed(3));
@@ -1719,37 +1719,25 @@ initHangulReveal(
     return Math.max(0, 1 - dist / zone);
   }
 
-  let vScrollY = window.scrollY;
-
-  window.addEventListener("wheel", (e) => {
-    e.preventDefault();
-    const delta = e.deltaY;
-
-    let maxFactor = 0;
+  function updateCarouselFromScroll() {
     scenes.forEach((scene, i) => {
       const rect = scene.getBoundingClientRect();
       const inView = rect.bottom > 0 && rect.top < window.innerHeight;
       if (!inView) return;
 
       const f = getActiveFactor(scene);
-      maxFactor = Math.max(maxFactor, f);
-      // 화면에 조금이라도 보이면 회전 시작, 중앙 가까울수록 빨라짐
-      const speed = 0.00010 + 0.00022 * f * 1.5;
-      rot[i].target += delta * speed;
+      const progress = Math.min(1, Math.max(0, (window.innerHeight - rect.top) / (window.innerHeight + rect.height)));
+      rot[i].target = progress * (0.72 + f * 0.38);
     });
 
-    // 중앙 가까울수록 스크롤 감속 (최소 12% 속도)
-    const scrollMult = 1 - maxFactor * 0.88;
-    vScrollY = Math.max(
-      0,
-      Math.min(document.documentElement.scrollHeight - window.innerHeight, vScrollY + delta * scrollMult)
-    );
-    window.scrollTo({ top: vScrollY, behavior: "instant" });
-
     if (!rafId) rafId = requestAnimationFrame(render);
-  }, { passive: false });
+  }
+
+  window.addEventListener("scroll", updateCarouselFromScroll, { passive: true });
+  window.addEventListener("resize", updateCarouselFromScroll);
 
   scenes.forEach(setupCells);
+  updateCarouselFromScroll();
   render();
 })();
 
