@@ -22,6 +22,28 @@ const inkOverlay = document.querySelector(".ink-overlay");
 const siteMenu = document.querySelector(".site-menu");
 
 const gsapInstance = window.gsap || null;
+const enablePointerReveal = false;
+const enableMenuInkOverlay = true;
+
+let scrollUpdateFrame = null;
+
+function updateScrollLinkedScenes() {
+  setHeroTitleStep();
+  setChangeObjectInteraction();
+  setKingPeopleScene();
+  setSoundInteractionPin();
+}
+
+function requestScrollLinkedUpdate() {
+  if (scrollUpdateFrame !== null) {
+    return;
+  }
+
+  scrollUpdateFrame = requestAnimationFrame(() => {
+    scrollUpdateFrame = null;
+    updateScrollLinkedScenes();
+  });
+}
 
 
 function setHeroTitleStep() {
@@ -65,8 +87,8 @@ function setChangeObjectInteraction() {
   storyPageChange.classList.toggle("is-change-released", isReleased);
 
   const textRect = storyChangeTextPanel.getBoundingClientRect();
-  const objectGap = Math.min(170, Math.max(88, window.innerHeight * 0.1));
-  const objectTop = Math.min(window.innerHeight * 0.82, textRect.bottom + objectGap);
+  const textCenter = textRect.top + textRect.height * 0.56;
+  const objectTop = Math.min(window.innerHeight * 0.76, Math.max(window.innerHeight * 0.3, textCenter));
   storyPageChange.style.setProperty("--change-object-top", `${(objectTop / window.innerHeight * 100).toFixed(3)}svh`);
 
   changeObjects.forEach((object, index) => {
@@ -88,11 +110,10 @@ function setChangeObjectInteraction() {
 }
 
 setHeroTitleStep();
-window.addEventListener("scroll", setHeroTitleStep, { passive: true });
+window.addEventListener("scroll", requestScrollLinkedUpdate, { passive: true });
 window.addEventListener("resize", setHeroTitleStep);
 
 setChangeObjectInteraction();
-window.addEventListener("scroll", setChangeObjectInteraction, { passive: true });
 window.addEventListener("resize", setChangeObjectInteraction);
 window.addEventListener("load", setChangeObjectInteraction);
 
@@ -125,11 +146,11 @@ function initWorldMapInteraction() {
     const routeFlow = routeFlows[index];
 
     gsapInstance.set(route, {
-      opacity: 0.12,
+      opacity: 0.14,
     });
 
     timeline.to(route, {
-      opacity: 0.48,
+      opacity: 0.82,
       duration: 0.24,
       ease: "sine.out",
     }, 0);
@@ -248,7 +269,6 @@ function setKingPeopleScene() {
 }
 
 setKingPeopleScene();
-window.addEventListener("scroll", setKingPeopleScene, { passive: true });
 window.addEventListener("resize", setKingPeopleScene);
 
 function setSoundInteractionPin() {
@@ -265,7 +285,6 @@ function setSoundInteractionPin() {
 }
 
 setSoundInteractionPin();
-window.addEventListener("scroll", setSoundInteractionPin, { passive: true });
 window.addEventListener("resize", setSoundInteractionPin);
 
 function initSoundCollisionExperience() {
@@ -1142,6 +1161,7 @@ function initInkOverlay(container, menuEl) {
   let progress = 0;
   let targetProgress = 0;
   let lastTime = performance.now();
+  let inkFrame = null;
 
   const material = new THREE.ShaderMaterial({
     transparent: true,
@@ -1342,16 +1362,28 @@ function initInkOverlay(container, menuEl) {
   window.addEventListener("resize", resize);
   resize();
 
+  function requestInkRender() {
+    if (inkFrame !== null) {
+      return;
+    }
+
+    inkFrame = requestAnimationFrame(render);
+  }
+
   menuEl.addEventListener("mouseenter", () => {
     targetProgress = 0.6;
     menuEl.classList.add("ink-active");
+    requestInkRender();
   });
 
   menuEl.addEventListener("mouseleave", () => {
     targetProgress = 0;
+    requestInkRender();
   });
 
   function render(now) {
+    inkFrame = null;
+
     const delta = Math.min(0.05, (now - lastTime) / 1000);
     lastTime = now;
 
@@ -1368,10 +1400,10 @@ function initInkOverlay(container, menuEl) {
       renderer.render(scene, camera);
     }
 
-    requestAnimationFrame(render);
+    if (targetProgress > 0 || progress > 0.001) {
+      requestInkRender();
+    }
   }
-
-  requestAnimationFrame(render);
 }
 
 function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
@@ -1420,6 +1452,16 @@ function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
   let renderTargetA;
   let renderTargetB;
   let lastTime = performance.now();
+  let isVisible = true;
+  let renderFrame = null;
+
+  function requestRender() {
+    if (renderFrame !== null) {
+      return;
+    }
+
+    renderFrame = requestAnimationFrame(render);
+  }
 
   const vertexShader = `
     varying vec2 vUv;
@@ -1733,7 +1775,29 @@ function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
 
   resize();
 
+  if ("IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisible = entry.isIntersecting;
+
+        if (isVisible) {
+          lastTime = performance.now();
+          requestRender();
+        }
+      },
+      { rootMargin: "15% 0px" },
+    );
+
+    observer.observe(container);
+  }
+
   function render(now) {
+    renderFrame = null;
+
+    if (!isVisible) {
+      return;
+    }
+
     const delta = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
     lastTime = now;
 
@@ -1757,14 +1821,17 @@ function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
     displayMaterial.uniforms.uMask.value = renderTargetA.texture;
     renderer.render(scene, camera);
 
-    requestAnimationFrame(render);
+    requestRender();
   }
 
-  requestAnimationFrame(render);
+  requestRender();
 }
 
-initHangulReveal(heroWebgl, "./assets/images/hero/hangeul-base.png", "./assets/images/hero/hangeul-reveal.png");
-if (storyPageIntro) {
+if (enablePointerReveal) {
+  initHangulReveal(heroWebgl, "./assets/images/hero/hangeul-base.png", "./assets/images/hero/hangeul-reveal.png");
+}
+
+if (enablePointerReveal && storyPageIntro) {
   const storyIntroWebgl = document.createElement("div");
   storyIntroWebgl.className = "story-intro-webgl";
   storyIntroWebgl.setAttribute("aria-hidden", "true");
@@ -1776,7 +1843,8 @@ if (storyPageIntro) {
     { widthFit: true },
   );
 }
-if (soundInteractionSticky) {
+
+if (enablePointerReveal && soundInteractionSticky) {
   const soundInteractionWebgl = document.createElement("div");
   soundInteractionWebgl.className = "sound-interaction-webgl";
   soundInteractionWebgl.setAttribute("aria-hidden", "true");
@@ -1793,16 +1861,19 @@ if (soundInteractionSticky) {
     console.error("Sound collision interaction failed to initialize.", error);
   }
 }
-initHangulReveal(
-  kingPeopleWebgl,
-  "./assets/images/hero/hangeul-base.png",
-  "./assets/images/hero/hangeul-reveal.png",
-);
-initHangulReveal(
-  kingPeopleHeartWebgl,
-  "./assets/images/king-people/king-people-bg-02.webp",
-  "./assets/images/king-people/king-people-bg-02.webp",
-);
+
+if (enablePointerReveal) {
+  initHangulReveal(
+    kingPeopleWebgl,
+    "./assets/images/hero/hangeul-base.png",
+    "./assets/images/hero/hangeul-reveal.png",
+  );
+  initHangulReveal(
+    kingPeopleHeartWebgl,
+    "./assets/images/king-people/king-people-bg-02.webp",
+    "./assets/images/king-people/king-people-bg-02.webp",
+  );
+}
 
 
 // Record 3D 원기둥 카루셀 (Codrops 구조)
@@ -1869,4 +1940,6 @@ initHangulReveal(
   render();
 })();
 
-initInkOverlay(inkOverlay, siteMenu);
+if (enableMenuInkOverlay) {
+  initInkOverlay(inkOverlay, siteMenu);
+}

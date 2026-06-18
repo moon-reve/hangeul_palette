@@ -581,20 +581,6 @@ a {
   );
 }
 
-.story-background-track {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  pointer-events: none;
-}
-
-.story-background-image {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
 .story-content {
   position: relative;
   z-index: 1;
@@ -795,6 +781,7 @@ a {
 }
 
 .story-page-change {
+  --change-object-left: 74%;
   --change-object-top: 58svh;
   min-height: 500svh;
 }
@@ -820,15 +807,21 @@ a {
 .story-page-change .story-change-text-panel {
   position: absolute;
   z-index: 2;
+  left: calc(208.8828125 / 1920 * 100%);
   top: calc(292 / 1080 * 100svh);
+  width: min(32.24vw, 32.2396vw);
+  text-align: left;
+  transform: none;
 }
 
 .story-page-change.is-change-pinned .story-change-text-panel {
   position: fixed;
   top: calc(292 / 1080 * 100svh);
-  left: 50%;
+  left: calc(208.8828125 / 1920 * 100%);
   z-index: 2;
-  transform: translateX(-50%);
+  width: min(32.24vw, 32.2396vw);
+  text-align: left;
+  transform: none;
 }
 
 .story-page-change.is-change-released .story-change-text-panel {
@@ -926,12 +919,12 @@ a {
 }
 
 .story-world-text-panel {
-  top: calc(327 / 1080 * 100svh);
+  top: 13.4svh;
 }
 
 .world-map-interaction {
   position: absolute;
-  top: calc(535 / 1080 * 100svh);
+  top: 49.5svh;
   left: 50%;
   z-index: 2;
   width: min(74vw, 1321px);
@@ -963,7 +956,7 @@ a {
   top: 41.5%;
   left: 45.5%;
   z-index: 4;
-  width: min(4.4vw, 58px);
+  width: min(8.8vw, 116px);
   opacity: 0.78;
   transform: translate(-50%, -50%);
   filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.45));
@@ -989,10 +982,10 @@ a {
 }
 
 .world-route {
-  stroke: rgba(255, 255, 255, 0.56);
-  stroke-width: 0.9;
-  opacity: 0.12;
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.16));
+  stroke: rgba(255, 255, 255, 0.78);
+  stroke-width: 1.05;
+  opacity: 0.14;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.26));
 }
 
 .world-route-flow {
@@ -1252,7 +1245,7 @@ a {
 .change-object {
   position: absolute;
   display: block;
-  left: 50%;
+  left: var(--change-object-left);
   height: auto;
   opacity: 0;
   transform: translate3d(-50%, calc(-50% + 7.8125vw), 0) scale(0.46);
@@ -1697,7 +1690,7 @@ a {
   }
 
   .world-korea-point {
-    width: min(8vw, 46px);
+    width: min(16vw, 92px);
   }
 
   .story-title {
