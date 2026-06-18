@@ -537,8 +537,9 @@ a {
 
 .story-background {
   position: relative;
+  min-height: 1690svh;
   overflow: hidden;
-  background: #e1e1e1;
+  background: #e1e1e1 url("../assets/images/story/story-bg-base.webp") repeat-y top center / 100% auto;
 }
 
 .section-king-people::before {
@@ -559,7 +560,8 @@ a {
 }
 
 .story-background-track {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 0;
   width: 100%;
   pointer-events: none;
@@ -593,7 +595,42 @@ a {
 }
 
 .story-page-change {
+  --change-object-top: 58svh;
   min-height: 500svh;
+}
+
+.story-page-change::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: none;
+  pointer-events: none;
+  background: #e1e1e1 url("../assets/images/story/story-bg-base.webp") repeat-y top center / 100% auto;
+}
+
+.story-page-change.is-change-pinned::before {
+  display: block;
+}
+
+.story-page-change .story-change-text-panel {
+  position: absolute;
+  z-index: 2;
+  top: calc(292 / 1080 * 100svh);
+}
+
+.story-page-change.is-change-pinned .story-change-text-panel {
+  position: fixed;
+  top: calc(292 / 1080 * 100svh);
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+}
+
+.story-page-change.is-change-released .story-change-text-panel {
+  position: absolute;
+  top: calc(368svh + 292 / 1080 * 100svh);
+  bottom: auto;
 }
 
 .story-page-intro {
@@ -934,16 +971,38 @@ a {
 }
 
 .change-object-interaction {
-  position: relative;
-  margin-top: 100svh;
-  min-height: 400svh;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 4;
+  height: 100svh;
+  pointer-events: none;
 }
 
 .change-object-sticky {
-  position: sticky;
+  position: absolute;
   top: 0;
+  right: 0;
+  left: 0;
+  height: 100svh;
   min-height: 100svh;
   overflow: hidden;
+}
+
+.story-page-change.is-change-pinned .change-object-sticky {
+  position: fixed;
+  right: 0;
+  left: 0;
+  z-index: 4;
+}
+
+.story-page-change.is-change-released .change-object-sticky {
+  position: absolute;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
 }
 
 .change-object {
@@ -951,33 +1010,37 @@ a {
   display: block;
   left: 50%;
   height: auto;
-  transform: translateX(-50%);
+  opacity: 0;
+  transform: translate3d(-50%, calc(-50% + 150px), 0) scale(0.46);
+  transform-origin: center center;
+  will-change: transform, opacity, filter;
   pointer-events: none;
+  visibility: visible;
 }
 
 .change-object-pen {
-  top: calc(86 / 1080 * 100svh);
-  width: min(4.27vw, 82px);
+  top: var(--change-object-top);
+  width: min(13vw, 240px);
 }
 
 .change-object-type {
-  top: calc(307 / 1080 * 100svh);
-  width: min(45.31vw, 870px);
+  top: var(--change-object-top);
+  width: min(42vw, 760px);
 }
 
 .change-object-typewriter {
-  top: calc(540 / 1080 * 100svh);
-  width: min(24.11vw, 463px);
+  top: var(--change-object-top);
+  width: min(30vw, 520px);
 }
 
 .change-object-computer {
-  top: calc(720 / 1080 * 100svh);
-  width: min(25.63vw, 492px);
+  top: var(--change-object-top);
+  width: min(32vw, 560px);
 }
 
 .change-object-phone {
-  top: calc(890 / 1080 * 100svh);
-  width: min(14.58vw, 280px);
+  top: var(--change-object-top);
+  width: min(24vw, 430px);
 }
 
 .section-king-people {
@@ -1292,6 +1355,23 @@ a {
     top: 24svh;
   }
 
+  .story-page-change .story-change-text-panel {
+    top: 24svh;
+  }
+
+  .story-page-change.is-change-pinned .story-change-text-panel {
+    right: 28px;
+    left: 28px;
+    top: 24svh;
+    width: auto;
+    transform: none;
+  }
+
+  .story-page-change.is-change-released .story-change-text-panel {
+    top: calc(368svh + 24svh);
+    bottom: auto;
+  }
+
   .story-world-text-panel {
     top: 24svh;
   }
@@ -1333,17 +1413,21 @@ a {
     transform: none;
   }
 
+  .change-object-pen {
+    width: min(24vw, 160px);
+  }
+
   .change-object-type {
-    width: min(92vw, 620px);
+    width: min(82vw, 560px);
   }
 
   .change-object-typewriter,
   .change-object-computer {
-    width: min(58vw, 420px);
+    width: min(62vw, 380px);
   }
 
   .change-object-phone {
-    width: min(34vw, 220px);
+    width: min(52vw, 270px);
   }
 }
 
