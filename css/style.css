@@ -175,6 +175,7 @@ a {
   display: flex;
   align-items: center;
   gap: clamp(36px, 2.25vw, 44px);
+  transform: translateY(-50%);
 }
 
 .hero-brand {
@@ -223,7 +224,6 @@ a {
 
 .hero-title-next {
   top: 7px;
-  font-size: clamp(26px, 2.604vw, 50px);
   line-height: 1.1;
 }
 
@@ -235,14 +235,36 @@ a {
   font-weight: 200;
 }
 
-.hero-title-initial .hero-title-strong {
-  font-family: "Danjo", serif;
-  font-weight: 400;
+.hero-title-initial,
+.hero-title-next {
+  display: inline-flex;
+  align-items: flex-end;
 }
 
-.hero-title-initial .hero-title-light {
+.hero-title-initial .hero-title-strong,
+.hero-title-initial .hero-title-light,
+.hero-title-next .hero-title-strong,
+.hero-title-next .hero-title-light {
+  display: inline-block;
+  line-height: 1;
+}
+
+.hero-title-initial .hero-title-strong,
+.hero-title-next .hero-title-strong {
+  font-family: "Danjo", serif;
+  font-weight: 400;
+  transform: translateY(-0.1em);
+}
+
+.hero-title-initial .hero-title-light,
+.hero-title-next .hero-title-light {
+  color: #3a3a3a;
   font-family: "Pretendard", sans-serif;
-  font-weight: normal;
+  font-weight: 300;
+}
+
+.hero-title-next .hero-title-strong {
+  margin-left: 0.24em;
 }
 
 .hero-scroll {
