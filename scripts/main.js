@@ -944,6 +944,7 @@ function initInkOverlay(container, menuEl) {
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
     alpha: true,
+    premultipliedAlpha: false,
     powerPreference: "high-performance",
   });
   renderer.setClearColor(0x000000, 0);
@@ -1019,7 +1020,7 @@ function initInkOverlay(container, menuEl) {
 
         float dist = length(p);
         float t = uTime * 0.02;
-        float radius = uProgress * 2.0;
+        float radius = uProgress * 1.2;
 
         vec2 dir = normalize(p + 0.001);
 
@@ -1034,6 +1035,12 @@ function initInkOverlay(container, menuEl) {
         float rB = radius * (0.38 + bL1 + bL2);
         float blobB = 1.0 - smoothstep(rB * 0.94, rB * 1.25, dist);
 
+        // 중담묵: 담묵과 중묵 사이 추가 레이어
+        float mL1 = fbm(dir * 2.0 + t * 0.17 + 4.6) * 0.30;
+        float mL2 = fbm(dir * 5.5 - t * 0.13 + 9.2) * 0.09;
+        float rM = radius * (0.44 + mL1 + mL2);
+        float blobM = 1.0 - smoothstep(rM * 0.50, rM, dist);
+
         // 담묵: 크고 불규칙한 외곽
         float aL1 = fbm(dir * 1.7 + t * 0.16) * 0.34;
         float aL2 = fbm(dir * 4.8 - t * 0.13 + 2.3) * 0.10;
@@ -1041,13 +1048,14 @@ function initInkOverlay(container, menuEl) {
         float rA = radius * (0.52 + aL1 + aL2 + aL3);
         float blobA = 1.0 - smoothstep(rA * 0.50, rA, dist);
 
-        // 안쪽 레이어 클립
-        blobB = min(blobB, blobA);
-        blobC = min(blobC, blobA);
+        // 클립: 레이어 중첩 순서 보장
+        blobM = min(blobM, blobA);
+        blobB = min(blobB, blobM);
+        blobC = min(blobC, blobB);
 
-        float alpha = max(blobA * 0.26, max(blobB * 0.62, blobC * 0.97));
+        float alpha = max(blobA * 0.26, max(blobM * 0.44, max(blobB * 0.62, blobC * 0.97)));
 
-        // 코너에서 일정 반경 밖은 균일하게 페이드 — 방향 무관하므로 끊어진 얼룩 원천 차단
+        // 균일 페이드
         float globalFade = 1.0 - smoothstep(radius * 0.72, radius * 0.92, dist);
         alpha *= globalFade;
         alpha = clamp(alpha, 0.0, 1.0);
