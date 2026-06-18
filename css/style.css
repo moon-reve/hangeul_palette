@@ -914,6 +914,7 @@ a {
 
 .story-heart-text-panel {
   top: calc(327 / 1080 * 100svh);
+  z-index: 2;
 }
 
 .story-change-text-panel {
@@ -1023,14 +1024,12 @@ a {
 
 .heart-video-interaction {
   position: relative;
-  margin-top: 100svh;
+  margin-top: calc(733 / 1080 * 100svh);
 }
 
 .heart-video-scene {
-  position: sticky;
-  top: 0;
+  position: relative;
   min-height: 100svh;
-  overflow: hidden;
 }
 
 .heart-video-title {
@@ -1052,46 +1051,57 @@ a {
   backdrop-filter: blur(4px);
 }
 
+/* Scene-01: 이미지 좌측(x=208), 텍스트 우측(right=283.77) */
+.heart-video-scene-01 .heart-video-placeholder {
+  top: 58svh;
+  left: calc(208 / 1920 * 100%);
+  width: min(44.64vw, 857px);
+  aspect-ratio: 857 / 482;
+}
+
 .heart-video-scene-01 .heart-video-title {
-  top: calc(327 / 1080 * 100svh + 866px);
+  top: 88svh;
   right: calc(283.77 / 1920 * 100%);
 }
 
+/* Scene-02: 이미지 우측(x=858), 텍스트 좌측(x=206) */
 .heart-video-scene-02 .heart-video-placeholder {
-  top: calc(250 / 1080 * 100svh);
-  right: 0;
-  width: min(78.38vw, 1505px);
-  aspect-ratio: 1505 / 482;
+  top: 38svh;
+  left: calc(858 / 1920 * 100%);
+  width: min(44.64vw, 857px);
+  aspect-ratio: 857 / 482;
 }
 
 .heart-video-scene-02 .heart-video-title {
-  left: 0;
-  bottom: calc(250 / 1080 * 100svh);
+  top: 59svh;
+  left: calc(206 / 1920 * 100%);
 }
 
+/* Scene-03: 이미지 좌측(x=208), 텍스트 우측(right=283.77) */
 .heart-video-scene-03 .heart-video-placeholder {
-  top: calc(255 / 1080 * 100svh);
-  left: 0;
-  width: min(77.34vw, 1485px);
-  aspect-ratio: 1485 / 462;
+  top: 14svh;
+  left: calc(208 / 1920 * 100%);
+  width: min(44.41vw, 852px);
+  aspect-ratio: 852 / 462;
 }
 
 .heart-video-scene-03 .heart-video-title {
-  right: calc(80 / 1920 * 100%);
-  bottom: calc(245 / 1080 * 100svh);
+  top: 66svh;
+  right: calc(283.77 / 1920 * 100%);
 }
 
+/* Scene-04: 텍스트 좌측(x=206), 이미지 중앙(x=678) */
 .heart-video-scene-04 .heart-video-title {
-  top: calc(80 / 1080 * 100svh);
-  left: calc(126 / 1920 * 100%);
+  top: 19svh;
+  left: calc(206 / 1920 * 100%);
 }
 
 .heart-video-scene-04 .heart-video-placeholder {
-  left: 50%;
-  bottom: calc(80 / 1080 * 100svh);
-  width: min(64.64vw, 1241px);
-  aspect-ratio: 1241 / 988;
-  transform: translateX(-50%);
+  top: 38svh;
+  left: calc(678 / 1920 * 100%);
+  width: min(29.4vw, 564px);
+  aspect-ratio: 564 / 750;
+  transform: none;
 }
 
 .change-object-interaction {
