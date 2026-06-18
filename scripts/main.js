@@ -32,6 +32,7 @@ let scrollUpdateFrame = null;
 function updateScrollLinkedScenes() {
   setHeroTitleStep();
   setChangeObjectInteraction();
+  setHeartVideoInteraction();
   setKingPeopleScene();
   setSoundInteractionPin();
 }
@@ -140,7 +141,6 @@ function setHeartVideoInteraction() {
 }
 
 setHeartVideoInteraction();
-window.addEventListener("scroll", setHeartVideoInteraction, { passive: true });
 window.addEventListener("resize", setHeartVideoInteraction);
 window.addEventListener("load", setHeartVideoInteraction);
 
@@ -2994,6 +2994,7 @@ if (enablePointerReveal) {
   // ?�크롤과 ?�전 분리???�전 ?�태
   const rot = Array.from(scenes).map(() => ({ current: 0, target: 0 }));
   let rafId = null;
+  let scrollFrameId = null;
 
   function render() {
     let needs = false;
@@ -3030,7 +3031,18 @@ if (enablePointerReveal) {
     if (!rafId) rafId = requestAnimationFrame(render);
   }
 
-  window.addEventListener("scroll", updateCarouselFromScroll, { passive: true });
+  function requestCarouselScrollUpdate() {
+    if (scrollFrameId !== null) {
+      return;
+    }
+
+    scrollFrameId = requestAnimationFrame(() => {
+      scrollFrameId = null;
+      updateCarouselFromScroll();
+    });
+  }
+
+  window.addEventListener("scroll", requestCarouselScrollUpdate, { passive: true });
   window.addEventListener("resize", updateCarouselFromScroll);
 
   scenes.forEach(setupCells);
