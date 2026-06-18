@@ -1041,17 +1041,15 @@ function initInkOverlay(container, menuEl) {
         float rA = radius * (0.52 + aL1 + aL2 + aL3);
         float blobA = 1.0 - smoothstep(rA * 0.50, rA, dist);
 
-        // 외곽 경계 텍스처
-        float edgeDist = max(0.0, dist - rA * 0.88);
-        float edgeZone = 1.0 - smoothstep(0.0, radius * 0.07, edgeDist);
-        float lumpN = fbm(p * 7.0 + t * 0.22);
-        blobA = max(blobA, step(0.58, lumpN) * edgeZone * 0.82);
-
         // 안쪽 레이어 클립
         blobB = min(blobB, blobA);
         blobC = min(blobC, blobA);
 
         float alpha = max(blobA * 0.26, max(blobB * 0.62, blobC * 0.97));
+
+        // 최대 반경 밖은 완전 투명 — 끊어진 얼룩 방지
+        float hardCut = 1.0 - step(rA * 1.05, dist);
+        alpha *= hardCut;
         alpha = clamp(alpha, 0.0, 1.0);
 
         vec3 inkColor = vec3(0.025);
