@@ -12,6 +12,8 @@ const kingPeopleHeartWebgl = document.querySelector(".king-people-heart-webgl");
 const storyPageIntro = document.querySelector(".story-page-intro");
 const soundInteraction = document.querySelector(".sound-interaction");
 const soundInteractionSticky = document.querySelector(".sound-interaction-sticky");
+const storyPageHeart = document.querySelector(".story-page-heart");
+const heartVideoTrack = document.querySelector(".heart-video-track");
 
 const storyPageChange = document.querySelector(".story-page-change");
 const storyChangeTextPanel = document.querySelector(".story-change-text-panel");
@@ -116,6 +118,31 @@ window.addEventListener("resize", setHeroTitleStep);
 setChangeObjectInteraction();
 window.addEventListener("resize", setChangeObjectInteraction);
 window.addEventListener("load", setChangeObjectInteraction);
+
+function setHeartVideoInteraction() {
+  if (!storyPageHeart || !heartVideoTrack) {
+    return;
+  }
+
+  const rect = storyPageHeart.getBoundingClientRect();
+  const videoStart = window.innerHeight;
+  const sceneCount = Math.max(1, heartVideoTrack.children.length);
+  const pinnedDistance = Math.max(1, (sceneCount - 1) * window.innerHeight);
+  const progress = Math.min(1, Math.max(0, (-rect.top - videoStart) / pinnedDistance));
+  const moveDistance = (sceneCount - 1) * 100;
+  const isPinned = rect.top <= -videoStart && progress < 1 && rect.bottom > window.innerHeight;
+  const isReleased = rect.top <= -(videoStart + pinnedDistance);
+
+  storyPageHeart.classList.toggle("is-heart-pinned", isPinned);
+  storyPageHeart.classList.toggle("is-heart-released", isReleased);
+  storyPageHeart.style.setProperty("--heart-video-release-top", `${(sceneCount * 100).toFixed(3)}svh`);
+  heartVideoTrack.style.transform = `translate3d(0, ${(-moveDistance * progress).toFixed(3)}svh, 0)`;
+}
+
+setHeartVideoInteraction();
+window.addEventListener("scroll", setHeartVideoInteraction, { passive: true });
+window.addEventListener("resize", setHeartVideoInteraction);
+window.addEventListener("load", setHeartVideoInteraction);
 
 function initWorldMapInteraction() {
   if (!worldMapInteraction || !gsapInstance) {
