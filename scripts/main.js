@@ -1028,7 +1028,33 @@ function initInkOverlay(container, menuEl) {
         return clamp(blobA * 0.26 * fade, 0.0, 1.0);
       }
 
-      // 중담묵 + 중묵 + 농묵 — 블러를 더 줄 레이어들
+      // 중담묵 전용
+      float inkMid(vec2 uv) {
+        vec2 p = uv - vec2(1.0, 1.0);
+        p.x *= uResolution.x / uResolution.y;
+        float dist = length(p);
+        float t = uTime * 0.02;
+        float radius = uProgress * 1.68;
+        vec2 dir = normalize(p + 0.001);
+
+        float mL1 = fbm(dir * 2.0 + t * 0.17 + 4.6) * 0.30;
+        float mL2 = fbm(dir * 5.5 - t * 0.13 + 9.2) * 0.09;
+        float rM = radius * (0.44 + mL1 + mL2);
+        float blobM = 1.0 - smoothstep(rM * 0.50, rM, dist);
+
+        float aL1 = fbm(dir * 1.7 + t * 0.16) * 0.34;
+        float aL2 = fbm(dir * 4.8 - t * 0.13 + 2.3) * 0.10;
+        float aL3 = fbm(dir * 10.5 + t * 0.26 + 5.2) * 0.03;
+        float rA = radius * (0.52 + aL1 + aL2 + aL3);
+        float blobA = 1.0 - smoothstep(rA * 0.50, rA, dist);
+
+        blobM = min(blobM, blobA);
+
+        float fade = 1.0 - smoothstep(radius * 0.72, radius * 0.92, dist);
+        return clamp(blobM * 0.44 * fade, 0.0, 1.0);
+      }
+
+      // 중묵 + 농묵
       float inkInner(vec2 uv) {
         vec2 p = uv - vec2(1.0, 1.0);
         p.x *= uResolution.x / uResolution.y;
@@ -1061,7 +1087,7 @@ function initInkOverlay(container, menuEl) {
         blobB = min(blobB, blobM);
         blobC = min(blobC, blobB);
 
-        float a = max(blobM * 0.44, max(blobB * 0.62, blobC * 0.97));
+        float a = max(blobB * 0.62, blobC * 0.97);
         float fade = 1.0 - smoothstep(radius * 0.72, radius * 0.92, dist);
         return clamp(a * fade, 0.0, 1.0);
       }
@@ -1072,7 +1098,7 @@ function initInkOverlay(container, menuEl) {
           return;
         }
 
-        // 담묵: 작은 블러 (σ ≈ 5px)
+        // 담묵: σ ≈ 1px
         vec2 sA = 1.0 / uResolution;
         float alphaOuter =
           inkOuter(vUv + vec2(-sA.x, -sA.y)) * 0.0625 +
@@ -1085,7 +1111,20 @@ function initInkOverlay(container, menuEl) {
           inkOuter(vUv + vec2(  0.0,  sA.y)) * 0.125  +
           inkOuter(vUv + vec2( sA.x,  sA.y)) * 0.0625;
 
-        // 중담묵/중묵/농묵: 큰 블러 (σ ≈ 12px)
+        // 중담묵: σ ≈ 5px
+        vec2 sM = 5.0 / uResolution;
+        float alphaMid =
+          inkMid(vUv + vec2(-sM.x, -sM.y)) * 0.0625 +
+          inkMid(vUv + vec2(  0.0, -sM.y)) * 0.125  +
+          inkMid(vUv + vec2( sM.x, -sM.y)) * 0.0625 +
+          inkMid(vUv + vec2(-sM.x,   0.0)) * 0.125  +
+          inkMid(vUv                      ) * 0.25   +
+          inkMid(vUv + vec2( sM.x,   0.0)) * 0.125  +
+          inkMid(vUv + vec2(-sM.x,  sM.y)) * 0.0625 +
+          inkMid(vUv + vec2(  0.0,  sM.y)) * 0.125  +
+          inkMid(vUv + vec2( sM.x,  sM.y)) * 0.0625;
+
+        // 중묵/농묵: σ ≈ 12px
         vec2 sI = 12.0 / uResolution;
         float alphaInner =
           inkInner(vUv + vec2(-sI.x, -sI.y)) * 0.0625 +
@@ -1098,7 +1137,7 @@ function initInkOverlay(container, menuEl) {
           inkInner(vUv + vec2(  0.0,  sI.y)) * 0.125  +
           inkInner(vUv + vec2( sI.x,  sI.y)) * 0.0625;
 
-        float alpha = max(alphaOuter, alphaInner);
+        float alpha = max(alphaOuter, max(alphaMid, alphaInner));
         vec3 inkColor = vec3(0.025);
         gl_FragColor = vec4(inkColor, alpha);
       }
