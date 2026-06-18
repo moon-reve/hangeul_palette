@@ -12,6 +12,14 @@ const kingPeopleHeartWebgl = document.querySelector(".king-people-heart-webgl");
 const storyPageIntro = document.querySelector(".story-page-intro");
 const soundInteraction = document.querySelector(".sound-interaction");
 const soundInteractionSticky = document.querySelector(".sound-interaction-sticky");
+
+const storyPageChange = document.querySelector(".story-page-change");
+const storyChangeTextPanel = document.querySelector(".story-change-text-panel");
+const changeObjects = Array.from(document.querySelectorAll(".change-object"));
+
+const inkOverlay = document.querySelector(".ink-overlay");
+const siteMenu = document.querySelector(".site-menu");
+
 const gsapInstance = window.gsap || null;
 
 
@@ -40,9 +48,52 @@ function smoothProgress(value, start, end) {
   return progress * progress * (3 - 2 * progress);
 }
 
+function setChangeObjectInteraction() {
+  if (!storyPageChange || !storyChangeTextPanel || !changeObjects.length) {
+    return;
+  }
+
+  const rect = storyPageChange.getBoundingClientRect();
+  const scrollableDistance = Math.max(1, storyPageChange.offsetHeight - window.innerHeight);
+  const progress = Math.min(1, Math.max(0, -rect.top / scrollableDistance));
+  const releaseProgress = 0.92;
+  const isPinned = rect.top <= 0 && progress < releaseProgress && rect.bottom > window.innerHeight;
+  const isReleased = rect.top <= 0 && progress >= releaseProgress;
+
+  storyPageChange.classList.toggle("is-change-pinned", isPinned);
+  storyPageChange.classList.toggle("is-change-released", isReleased);
+
+  const textRect = storyChangeTextPanel.getBoundingClientRect();
+  const objectGap = Math.min(170, Math.max(88, window.innerHeight * 0.1));
+  const objectTop = Math.min(window.innerHeight * 0.82, textRect.bottom + objectGap);
+  storyPageChange.style.setProperty("--change-object-top", `${objectTop}px`);
+
+  changeObjects.forEach((object, index) => {
+    const start = index * 0.14;
+    const end = start + 0.32;
+    const localProgress = Math.min(1, Math.max(0, (progress - start) / (end - start)));
+    const approachProgress = smoothProgress(localProgress, 0, 0.42);
+    const exitProgress = smoothProgress(localProgress, 0.58, 1);
+    const visibility = isPinned ? Math.max(0, Math.min(1, approachProgress * (1 - exitProgress) * 1.35)) : 0;
+    const translateY = 150 * (1 - approachProgress) - 110 * exitProgress;
+    const scale = 0.46 + approachProgress * 0.72 + exitProgress * 1.65;
+    const blur = exitProgress * 5;
+
+    object.style.opacity = `${visibility}`;
+    object.style.filter = blur > 0.1 ? `blur(${blur}px)` : "";
+    object.style.zIndex = `${changeObjects.length - index}`;
+    object.style.transform = `translate3d(-50%, calc(-50% + ${translateY}px), 0) scale(${scale})`;
+  });
+}
+
 setHeroTitleStep();
 window.addEventListener("scroll", setHeroTitleStep, { passive: true });
 window.addEventListener("resize", setHeroTitleStep);
+
+setChangeObjectInteraction();
+window.addEventListener("scroll", setChangeObjectInteraction, { passive: true });
+window.addEventListener("resize", setChangeObjectInteraction);
+window.addEventListener("load", setChangeObjectInteraction);
 
 function setKingPeopleScene() {
   if (!kingPeopleSection || !kingPeopleVideoScene || !kingPeopleVideoFrame) {
@@ -936,6 +987,258 @@ function initSoundCollisionExperience() {
   lazyInit();
 }
 
+function initInkOverlay(container, menuEl) {
+  if (!container || !menuEl) return;
+
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: true,
+    premultipliedAlpha: false,
+    powerPreference: "high-performance",
+  });
+  renderer.setClearColor(0x000000, 0);
+  container.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const geometry = new THREE.PlaneGeometry(2, 2);
+  const resolution = new THREE.Vector2(1, 1);
+
+  let progress = 0;
+  let targetProgress = 0;
+  let lastTime = performance.now();
+
+  const material = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: {
+      uResolution: { value: resolution },
+      uProgress: { value: 0 },
+      uTime: { value: 0 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = vec4(position.xy, 0.0, 1.0);
+      }
+    `,
+    fragmentShader: `
+      precision highp float;
+      varying vec2 vUv;
+      uniform vec2 uResolution;
+      uniform float uProgress;
+      uniform float uTime;
+
+      float hash(vec2 p) {
+        p = fract(p * vec2(234.21, 83.17));
+        p += dot(p, p + 19.19);
+        return fract(p.x * p.y);
+      }
+
+      float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        vec2 u = f * f * (3.0 - 2.0 * f);
+        return mix(
+          mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
+          mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+          u.y
+        );
+      }
+
+      float fbm(vec2 p) {
+        float v = 0.0;
+        float a = 0.5;
+        for (int i = 0; i < 6; i++) {
+          v += noise(p) * a;
+          p = p * 2.1 + 7.3;
+          a *= 0.5;
+        }
+        return v;
+      }
+
+      // 담묵(blobA) 전용 — 블러를 적게 줄 레이어
+      float inkOuter(vec2 uv) {
+        vec2 p = uv - vec2(1.0, 1.0);
+        p.x *= uResolution.x / uResolution.y;
+        float dist = length(p);
+        float t = uTime * 0.02;
+        float radius = uProgress * 1.68;
+        vec2 dir = normalize(p + 0.001);
+
+        float aL1 = fbm(dir * 1.7 + t * 0.16) * 0.34;
+        float aL2 = fbm(dir * 4.8 - t * 0.13 + 2.3) * 0.10;
+        float aL3 = fbm(dir * 10.5 + t * 0.26 + 5.2) * 0.03;
+        float rA = radius * (0.52 + aL1 + aL2 + aL3);
+        float blobA = 1.0 - smoothstep(rA * 0.50, rA, dist);
+
+        float fade = 1.0 - smoothstep(radius * 0.72, radius * 0.92, dist);
+        return clamp(blobA * 0.26 * fade, 0.0, 1.0);
+      }
+
+      // 중담묵 전용
+      float inkMid(vec2 uv) {
+        vec2 p = uv - vec2(1.0, 1.0);
+        p.x *= uResolution.x / uResolution.y;
+        float dist = length(p);
+        float t = uTime * 0.02;
+        float radius = uProgress * 1.68;
+        vec2 dir = normalize(p + 0.001);
+
+        float mL1 = fbm(dir * 2.0 + t * 0.17 + 4.6) * 0.30;
+        float mL2 = fbm(dir * 5.5 - t * 0.13 + 9.2) * 0.09;
+        float rM = radius * (0.44 + mL1 + mL2);
+        float blobM = 1.0 - smoothstep(rM * 0.50, rM, dist);
+
+        float aL1 = fbm(dir * 1.7 + t * 0.16) * 0.34;
+        float aL2 = fbm(dir * 4.8 - t * 0.13 + 2.3) * 0.10;
+        float aL3 = fbm(dir * 10.5 + t * 0.26 + 5.2) * 0.03;
+        float rA = radius * (0.52 + aL1 + aL2 + aL3);
+        float blobA = 1.0 - smoothstep(rA * 0.50, rA, dist);
+
+        blobM = min(blobM, blobA);
+
+        float fade = 1.0 - smoothstep(radius * 0.72, radius * 0.92, dist);
+        return clamp(blobM * 0.44 * fade, 0.0, 1.0);
+      }
+
+      // 중묵 + 농묵
+      float inkInner(vec2 uv) {
+        vec2 p = uv - vec2(1.0, 1.0);
+        p.x *= uResolution.x / uResolution.y;
+        float dist = length(p);
+        float t = uTime * 0.02;
+        float radius = uProgress * 1.68;
+        vec2 dir = normalize(p + 0.001);
+
+        float cL = fbm(dir * 3.5 + t * 0.20 + 16.2) * 0.20;
+        float rC = radius * (0.22 + cL);
+        float blobC = 1.0 - smoothstep(rC * 0.94, rC * 1.40, dist);
+
+        float bL1 = fbm(dir * 2.2 + t * 0.18 + 8.5) * 0.28;
+        float bL2 = fbm(dir * 6.0 - t * 0.14 + 12.0) * 0.08;
+        float rB = radius * (0.38 + bL1 + bL2);
+        float blobB = 1.0 - smoothstep(rB * 0.94, rB * 1.25, dist);
+
+        float mL1 = fbm(dir * 2.0 + t * 0.17 + 4.6) * 0.30;
+        float mL2 = fbm(dir * 5.5 - t * 0.13 + 9.2) * 0.09;
+        float rM = radius * (0.44 + mL1 + mL2);
+        float blobM = 1.0 - smoothstep(rM * 0.50, rM, dist);
+
+        float aL1 = fbm(dir * 1.7 + t * 0.16) * 0.34;
+        float aL2 = fbm(dir * 4.8 - t * 0.13 + 2.3) * 0.10;
+        float aL3 = fbm(dir * 10.5 + t * 0.26 + 5.2) * 0.03;
+        float rA = radius * (0.52 + aL1 + aL2 + aL3);
+        float blobA = 1.0 - smoothstep(rA * 0.50, rA, dist);
+
+        blobM = min(blobM, blobA);
+        blobB = min(blobB, blobM);
+        blobC = min(blobC, blobB);
+
+        float a = max(blobB * 0.62, blobC * 0.97);
+        float fade = 1.0 - smoothstep(radius * 0.72, radius * 0.92, dist);
+        return clamp(a * fade, 0.0, 1.0);
+      }
+
+      void main() {
+        if (uProgress <= 0.001) {
+          gl_FragColor = vec4(0.0);
+          return;
+        }
+
+        // 담묵: σ ≈ 1px
+        vec2 sA = 1.0 / uResolution;
+        float alphaOuter =
+          inkOuter(vUv + vec2(-sA.x, -sA.y)) * 0.0625 +
+          inkOuter(vUv + vec2(  0.0, -sA.y)) * 0.125  +
+          inkOuter(vUv + vec2( sA.x, -sA.y)) * 0.0625 +
+          inkOuter(vUv + vec2(-sA.x,   0.0)) * 0.125  +
+          inkOuter(vUv                      ) * 0.25   +
+          inkOuter(vUv + vec2( sA.x,   0.0)) * 0.125  +
+          inkOuter(vUv + vec2(-sA.x,  sA.y)) * 0.0625 +
+          inkOuter(vUv + vec2(  0.0,  sA.y)) * 0.125  +
+          inkOuter(vUv + vec2( sA.x,  sA.y)) * 0.0625;
+
+        // 중담묵: σ ≈ 5px
+        vec2 sM = 5.0 / uResolution;
+        float alphaMid =
+          inkMid(vUv + vec2(-sM.x, -sM.y)) * 0.0625 +
+          inkMid(vUv + vec2(  0.0, -sM.y)) * 0.125  +
+          inkMid(vUv + vec2( sM.x, -sM.y)) * 0.0625 +
+          inkMid(vUv + vec2(-sM.x,   0.0)) * 0.125  +
+          inkMid(vUv                      ) * 0.25   +
+          inkMid(vUv + vec2( sM.x,   0.0)) * 0.125  +
+          inkMid(vUv + vec2(-sM.x,  sM.y)) * 0.0625 +
+          inkMid(vUv + vec2(  0.0,  sM.y)) * 0.125  +
+          inkMid(vUv + vec2( sM.x,  sM.y)) * 0.0625;
+
+        // 중묵/농묵: σ ≈ 12px
+        vec2 sI = 12.0 / uResolution;
+        float alphaInner =
+          inkInner(vUv + vec2(-sI.x, -sI.y)) * 0.0625 +
+          inkInner(vUv + vec2(  0.0, -sI.y)) * 0.125  +
+          inkInner(vUv + vec2( sI.x, -sI.y)) * 0.0625 +
+          inkInner(vUv + vec2(-sI.x,   0.0)) * 0.125  +
+          inkInner(vUv                      ) * 0.25   +
+          inkInner(vUv + vec2( sI.x,   0.0)) * 0.125  +
+          inkInner(vUv + vec2(-sI.x,  sI.y)) * 0.0625 +
+          inkInner(vUv + vec2(  0.0,  sI.y)) * 0.125  +
+          inkInner(vUv + vec2( sI.x,  sI.y)) * 0.0625;
+
+        float alpha = max(alphaOuter, max(alphaMid, alphaInner));
+        vec3 inkColor = vec3(0.025);
+        gl_FragColor = vec4(inkColor, alpha);
+      }
+    `,
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+
+  function resize() {
+    const w = Math.max(1, container.clientWidth);
+    const h = Math.max(1, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(w, h, false);
+    resolution.set(w, h);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+
+  menuEl.addEventListener("mouseenter", () => {
+    targetProgress = 0.6;
+    menuEl.classList.add("ink-active");
+  });
+
+  menuEl.addEventListener("mouseleave", () => {
+    targetProgress = 0;
+  });
+
+  function render(now) {
+    const delta = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+
+    const speed = targetProgress > progress ? 3.0 : 1.5;
+    progress += (targetProgress - progress) * Math.min(1.0, delta * speed);
+
+    if (targetProgress === 0 && progress < 0.02) {
+      menuEl.classList.remove("ink-active");
+    }
+
+    if (progress > 0.001) {
+      material.uniforms.uProgress.value = progress;
+      material.uniforms.uTime.value = now * 0.001;
+      renderer.render(scene, camera);
+    }
+
+    requestAnimationFrame(render);
+  }
+
+  requestAnimationFrame(render);
+}
+
 function initHangulReveal(container, baseSrc, revealSrc, options = {}) {
   if (!container) {
     return;
@@ -1366,6 +1669,7 @@ initHangulReveal(
   "./assets/images/king-people/king-people-bg-02.webp",
 );
 
+
 // Record 3D 원기둥 카루셀 (Codrops 구조)
 (function initRecordCarousel() {
   const scenes = document.querySelectorAll(".scene-wrapper .scene");
@@ -1441,4 +1745,7 @@ initHangulReveal(
   scenes.forEach(setupCells);
   render();
 })();
+
+initInkOverlay(inkOverlay, siteMenu);
+
 

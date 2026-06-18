@@ -7,39 +7,7 @@
     <link rel="stylesheet" href="./css/style.css" />
   </head>
   <body>
-    <!-- SVG 필터: feTurbulence + feDisplacementMap 조합으로 먹물 번짐 질감 구현 -->
-    <svg id="ink-filters" aria-hidden="true" focusable="false"
-         style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none">
-      <defs>
-        <filter id="ink-filter" x="-40%" y="-40%" width="180%" height="180%"
-                color-interpolation-filters="linearRGB">
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.018 0.006"
-            numOctaves="5"
-            seed="12"
-            stitchTiles="stitch"
-            result="noise"
-          />
-          <feDisplacementMap
-            id="ink-displacement"
-            in="SourceGraphic"
-            in2="noise"
-            scale="0"
-            xChannelSelector="R"
-            yChannelSelector="G"
-          />
-        </filter>
-      </defs>
-    </svg>
-
-    <!-- 먹물 번짐 레이어: 호버 시 번짐, 클릭 시 전체화면 -->
-    <div class="ink-overlay" aria-hidden="true">
-      <span class="ink-paper-wash"></span>
-      <span class="ink-branches ink-branches-soft"></span>
-      <span class="ink-branches ink-branches-mid"></span>
-      <span class="ink-branches ink-branches-front"></span>
-    </div>
+    <div class="ink-overlay" aria-hidden="true"></div>
 
     <a class="site-menu" href="#contents">펼쳐보기</a>
 
@@ -50,16 +18,16 @@
           <div class="hero-copy-group">
             <div class="hero-brand" aria-label="국립한글박물관 문화체육관광부">
               <img class="hero-brand-mark" src="./assets/icons/brand-mark.svg" alt="" aria-hidden="true" />
-              <span>국립한글박물관 문화체육관광부</span>
+              <span>국립한글박물관</span>
             </div>
 
             <div class="hero-copy" aria-live="polite">
               <h1 class="hero-title hero-title-initial is-active">
-                <span class="hero-title-strong">한글의 시작</span><span class="hero-title-light">은 글자가 아니었습니다.</span>
+                <span class="hero-title-strong">한글</span><span class="hero-title-light">의 시작은 글자가 아니었습니다.</span>
               </h1>
 
               <p class="hero-title hero-title-next">
-                <span class="hero-title-light">사람을 향한</span><span class="hero-title-strong"> 마음</span><span class="hero-title-light">이었습니다.</span>
+                <span class="hero-title-light">사람을 향한 </span><span class="hero-title-strong">마음</span><span class="hero-title-light">이었습니다.</span>
               </p>
             </div>
 
@@ -384,6 +352,5 @@
     </main>
     <script src="./assets/vendor/gsap.min.js"></script>
     <script type="module" src="./scripts/main.js"></script>
-    <script type="module" src="./scripts/ink-interaction.js"></script>
   </body>
 </html>
