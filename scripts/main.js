@@ -1014,7 +1014,7 @@ function initInkOverlay(container, menuEl) {
         p.x *= uResolution.x / uResolution.y;
         float dist = length(p);
         float t = uTime * 0.02;
-        float radius = uProgress * 2.4;
+        float radius = uProgress * 1.68;
         vec2 dir = normalize(p + 0.001);
 
         float cL = fbm(dir * 3.5 + t * 0.20 + 16.2) * 0.20;
