@@ -1183,7 +1183,7 @@ a {
   --king-video-opacity: 0;
   --king-video-offset: 5svh;
   --king-video-copy-opacity: 0;
-  --king-video-copy-offset: 34px;
+  --king-video-copy-offset: 18px;
   position: relative;
   min-height: 200svh;
   background: #f5f0e7;
@@ -1312,19 +1312,24 @@ a {
 .king-people-video-copy {
   position: absolute;
   left: 50%;
-  bottom: 11%;
+  top: 50%;
   z-index: 2;
   width: min(82%, 1120px);
   margin: 0;
   color: #fff;
-  font-size: 50px;
+  font-family: "MaruBuri", serif;
+  font-size: 25px;
   font-weight: 400;
   line-height: 1.38;
   text-align: center;
   text-shadow: 0 3px 24px rgba(0, 0, 0, 0.38);
   opacity: var(--king-video-copy-opacity);
-  transform: translate3d(-50%, var(--king-video-copy-offset), 0);
+  transform: translate3d(-50%, calc(-50% + var(--king-video-copy-offset)), 0);
   pointer-events: none;
+}
+
+.king-people-video-copy strong {
+  font-weight: 700;
 }
 
 .king-people-text-panel {
@@ -1516,9 +1521,9 @@ a {
   }
 
   .king-people-video-copy {
-    bottom: 10%;
+    top: 50%;
     width: min(86%, 560px);
-    font-size: clamp(24px, 7vw, 38px);
+    font-size: clamp(18px, 5.2vw, 25px);
   }
 
   .king-people-text-panel {

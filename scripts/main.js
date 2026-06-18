@@ -105,11 +105,11 @@ function setKingPeopleScene() {
   const progress = Math.min(1, Math.max(0, -rect.top / scrollableDistance));
   const maskProgress = smoothProgress(progress, 0.02, 0.82);
   const videoOpacity = smoothProgress(progress, 0.25, 0.42);
-  const copyProgress = smoothProgress(progress, 0.84, 0.96);
+  const copyProgress = smoothProgress(progress, 0.78, 0.98);
   const frameFillOpacity = Math.max(0, Math.min(0.38, maskProgress * (1 - videoOpacity) * 0.38));
   const videoMaskSize = 1 + maskProgress * 99;
   const videoOffset = (1 - videoOpacity) * 5;
-  const copyOffset = (1 - copyProgress) * 34;
+  const copyOffset = (1 - copyProgress) * 18;
 
   kingPeopleSection.style.setProperty("--king-video-mask-size", `${videoMaskSize.toFixed(2)}%`);
   kingPeopleSection.style.setProperty("--king-frame-fill-opacity", frameFillOpacity.toFixed(3));
