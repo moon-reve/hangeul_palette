@@ -16,6 +16,7 @@ const soundInteractionSticky = document.querySelector(".sound-interaction-sticky
 const storyPageChange = document.querySelector(".story-page-change");
 const storyChangeTextPanel = document.querySelector(".story-change-text-panel");
 const changeObjects = Array.from(document.querySelectorAll(".change-object"));
+const worldMapInteraction = document.querySelector(".story-page-world .world-map-interaction");
 
 const inkOverlay = document.querySelector(".ink-overlay");
 const siteMenu = document.querySelector(".site-menu");
@@ -94,6 +95,133 @@ setChangeObjectInteraction();
 window.addEventListener("scroll", setChangeObjectInteraction, { passive: true });
 window.addEventListener("resize", setChangeObjectInteraction);
 window.addEventListener("load", setChangeObjectInteraction);
+
+function initWorldMapInteraction() {
+  if (!worldMapInteraction || !gsapInstance) {
+    return;
+  }
+
+  const routes = Array.from(worldMapInteraction.querySelectorAll(".world-route-base"));
+  const routeFlows = Array.from(worldMapInteraction.querySelectorAll(".world-route-flow"));
+  const particles = Array.from(worldMapInteraction.querySelectorAll(".world-particle"));
+  const glows = Array.from(worldMapInteraction.querySelectorAll(".world-destination-glow"));
+  const koreaPoint = worldMapInteraction.querySelector(".world-korea-point");
+  const koreaPosition = { left: "45.5%", top: "41.5%" };
+  const routeViewBox = { width: 1321, height: 659 };
+
+  if (!routes.length || !particles.length || !glows.length) {
+    return;
+  }
+
+  // The timeline is intentionally shared by hover and leave, so mouseleave can
+  // reverse the exact same cultural-expansion motion back toward Korea.
+  const timeline = gsapInstance.timeline({
+    paused: true,
+    defaults: { duration: 0.78, ease: "power3.inOut" },
+  });
+
+  const routeMetrics = routes.map((route, index) => {
+    const routeLength = route.getTotalLength();
+    const routeFlow = routeFlows[index];
+
+    gsapInstance.set(route, {
+      opacity: 0.12,
+    });
+
+    timeline.to(route, {
+      opacity: 0.48,
+      duration: 0.24,
+      ease: "sine.out",
+    }, 0);
+
+    if (routeFlow) {
+      const lightLength = Math.min(86, routeLength * 0.18);
+
+      // A short illuminated dash moves along the route, so the interaction
+      // feels like influence flowing through the line instead of a slow reveal.
+      gsapInstance.set(routeFlow, {
+        strokeDasharray: `${lightLength} ${routeLength}`,
+        strokeDashoffset: routeLength + lightLength,
+        opacity: 0,
+      });
+
+      timeline.to(routeFlow, {
+        strokeDashoffset: 0,
+        opacity: 1,
+        duration: 0.7,
+        ease: "power2.out",
+      }, 0.02);
+
+      timeline.to(routeFlow, {
+        opacity: 0,
+        duration: 0.24,
+        ease: "sine.out",
+      }, 0.58);
+    }
+
+    return { route, routeLength };
+  });
+
+  particles.forEach((particle, index) => {
+    const routeMetric = routeMetrics[index];
+    const particleMotion = { progress: 0 };
+
+    gsapInstance.set(particle, {
+      left: koreaPosition.left,
+      top: koreaPosition.top,
+      opacity: 0,
+      scale: 0.42,
+    });
+
+    // Each particle begins at Korea and travels with its line to imply that
+    // the influence is carried outward rather than simply switched on.
+    timeline.to(particleMotion, {
+      progress: 1,
+      onUpdate: () => {
+        if (!routeMetric) {
+          return;
+        }
+
+        const point = routeMetric.route.getPointAtLength(routeMetric.routeLength * particleMotion.progress);
+
+        gsapInstance.set(particle, {
+          left: `${(point.x / routeViewBox.width) * 100}%`,
+          top: `${(point.y / routeViewBox.height) * 100}%`,
+        });
+      },
+      duration: 0.7,
+    }, 0.02);
+
+    timeline.to(particle, {
+      opacity: 0.92,
+      scale: 0.82,
+      duration: 0.7,
+    }, 0.02);
+
+    timeline.to(glows[index], {
+      opacity: 1,
+      scale: 1,
+      duration: 0.42,
+      ease: "sine.out",
+    }, 0.32);
+  });
+
+  if (koreaPoint) {
+    timeline.to(koreaPoint, {
+      opacity: 1,
+      scale: 1.08,
+      duration: 0.36,
+      ease: "sine.out",
+    }, 0);
+  }
+
+  worldMapInteraction.addEventListener("mouseenter", () => timeline.play());
+  worldMapInteraction.addEventListener("mouseleave", () => timeline.reverse());
+  worldMapInteraction.addEventListener("focusin", () => timeline.play());
+  worldMapInteraction.addEventListener("focusout", () => timeline.reverse());
+}
+
+initWorldMapInteraction();
 
 function setKingPeopleScene() {
   if (!kingPeopleSection || !kingPeopleVideoScene || !kingPeopleVideoFrame) {
