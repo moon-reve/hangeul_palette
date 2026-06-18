@@ -1073,7 +1073,7 @@ function initInkOverlay(container, menuEl) {
         }
 
         // 담묵: 작은 블러 (σ ≈ 5px)
-        vec2 sA = 5.0 / uResolution;
+        vec2 sA = 1.0 / uResolution;
         float alphaOuter =
           inkOuter(vUv + vec2(-sA.x, -sA.y)) * 0.0625 +
           inkOuter(vUv + vec2(  0.0, -sA.y)) * 0.125  +
