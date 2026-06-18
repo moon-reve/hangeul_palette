@@ -559,7 +559,7 @@ a {
 
 .story-background {
   position: relative;
-  min-height: 1690svh;
+  min-height: 1820svh;
   overflow: hidden;
   background: #e1e1e1 url("../assets/images/story/story-bg-base.webp") repeat-y top center / 100% auto;
 }
@@ -799,6 +799,10 @@ a {
   min-height: 500svh;
 }
 
+.story-page-world {
+  min-height: 230svh;
+}
+
 .story-page-change::before {
   content: "";
   position: fixed;
@@ -923,6 +927,112 @@ a {
 
 .story-world-text-panel {
   top: calc(327 / 1080 * 100svh);
+}
+
+.world-map-interaction {
+  position: absolute;
+  top: calc(535 / 1080 * 100svh);
+  left: 50%;
+  z-index: 2;
+  width: min(74vw, 1321px);
+  aspect-ratio: 1321 / 659;
+  transform: translateX(-50%);
+  cursor: pointer;
+  outline: none;
+  isolation: isolate;
+}
+
+.world-map-base,
+.world-korea-point,
+.world-particle,
+.world-destination-glow {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.world-map-base {
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+}
+
+.world-korea-point {
+  top: 41.5%;
+  left: 45.5%;
+  z-index: 4;
+  width: min(4.4vw, 58px);
+  opacity: 0.78;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.45));
+}
+
+.world-route-svg {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.world-route,
+.world-route-flow {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  will-change: stroke-dashoffset, opacity;
+}
+
+.world-route {
+  stroke: rgba(255, 255, 255, 0.56);
+  stroke-width: 0.9;
+  opacity: 0.12;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.16));
+}
+
+.world-route-flow {
+  stroke: rgba(255, 255, 255, 0.94);
+  stroke-width: 1.35;
+  opacity: 0;
+  filter:
+    drop-shadow(0 0 7px rgba(255, 255, 255, 0.46))
+    drop-shadow(0 0 18px rgba(255, 255, 255, 0.22));
+}
+
+.world-destination-glow {
+  z-index: 3;
+  width: clamp(10px, 1.15vw, 18px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 0 18px rgba(255, 255, 255, 0.42),
+    0 0 42px rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%) scale(0.7);
+}
+
+.world-destination-glow-1 { left: 16%; top: 54%; }
+.world-destination-glow-2 { left: 89%; top: 41%; }
+.world-destination-glow-3 { left: 88%; top: 64%; }
+.world-destination-glow-4 { left: 12%; top: 47%; }
+.world-destination-glow-5 { left: 48%; top: 83%; }
+.world-destination-glow-6 { left: 56%; top: 78%; }
+
+.world-particle {
+  top: 41.5%;
+  left: 45.5%;
+  z-index: 5;
+  width: clamp(11px, 1.45vw, 24px);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.42);
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5));
+  will-change: top, left, opacity, transform;
 }
 
 .story-title {
@@ -1579,6 +1689,15 @@ a {
 
   .story-world-text-panel {
     top: 24svh;
+  }
+
+  .world-map-interaction {
+    top: 56svh;
+    width: min(94vw, 720px);
+  }
+
+  .world-korea-point {
+    width: min(8vw, 46px);
   }
 
   .story-title {
