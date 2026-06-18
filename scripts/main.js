@@ -14,6 +14,7 @@ const soundInteraction = document.querySelector(".sound-interaction");
 const soundInteractionSticky = document.querySelector(".sound-interaction-sticky");
 const gsapInstance = window.gsap || null;
 
+
 function setHeroTitleStep() {
   if (!hero || !initialTitle || !nextTitle) {
     return;
@@ -1364,3 +1365,4 @@ initHangulReveal(
   "./assets/images/king-people/king-people-bg-02.webp",
   "./assets/images/king-people/king-people-bg-02.webp",
 );
+

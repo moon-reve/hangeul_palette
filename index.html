@@ -7,6 +7,40 @@
     <link rel="stylesheet" href="./css/style.css" />
   </head>
   <body>
+    <!-- SVG 필터: feTurbulence + feDisplacementMap 조합으로 먹물 번짐 질감 구현 -->
+    <svg id="ink-filters" aria-hidden="true" focusable="false"
+         style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none">
+      <defs>
+        <filter id="ink-filter" x="-40%" y="-40%" width="180%" height="180%"
+                color-interpolation-filters="linearRGB">
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.018 0.006"
+            numOctaves="5"
+            seed="12"
+            stitchTiles="stitch"
+            result="noise"
+          />
+          <feDisplacementMap
+            id="ink-displacement"
+            in="SourceGraphic"
+            in2="noise"
+            scale="0"
+            xChannelSelector="R"
+            yChannelSelector="G"
+          />
+        </filter>
+      </defs>
+    </svg>
+
+    <!-- 먹물 번짐 레이어: 호버 시 번짐, 클릭 시 전체화면 -->
+    <div class="ink-overlay" aria-hidden="true">
+      <span class="ink-paper-wash"></span>
+      <span class="ink-branches ink-branches-soft"></span>
+      <span class="ink-branches ink-branches-mid"></span>
+      <span class="ink-branches ink-branches-front"></span>
+    </div>
+
     <a class="site-menu" href="#contents">펼쳐보기</a>
 
     <main>
@@ -326,6 +360,8 @@
         </div>
       </footer>
     </main>
+    <script src="./assets/vendor/gsap.min.js"></script>
     <script type="module" src="./scripts/main.js"></script>
+    <script type="module" src="./scripts/ink-interaction.js"></script>
   </body>
 </html>
