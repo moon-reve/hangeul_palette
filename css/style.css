@@ -84,11 +84,7 @@ a {
 
 .ink-overlay {
   position: fixed;
-  top: 0;
-  right: 0;
-  width: 55vw;
-  height: 55vh;
-  overflow: hidden;
+  inset: 0;
   z-index: 99;
   pointer-events: none;
 }
