@@ -1009,56 +1009,61 @@ function initInkOverlay(container, menuEl) {
         return v;
       }
 
-      void main() {
-        if (uProgress <= 0.001) {
-          gl_FragColor = vec4(0.0);
-          return;
-        }
-
-        vec2 p = vUv - vec2(1.0, 1.0);
+      float inkAlpha(vec2 uv) {
+        vec2 p = uv - vec2(1.0, 1.0);
         p.x *= uResolution.x / uResolution.y;
-
         float dist = length(p);
         float t = uTime * 0.02;
         float radius = uProgress * 1.2;
-
         vec2 dir = normalize(p + 0.001);
 
-        // 농묵: 작고 둥근 핵심
         float cL = fbm(dir * 3.5 + t * 0.20 + 16.2) * 0.20;
         float rC = radius * (0.22 + cL);
         float blobC = 1.0 - smoothstep(rC * 0.94, rC * 1.40, dist);
 
-        // 중묵: 중간 로브
         float bL1 = fbm(dir * 2.2 + t * 0.18 + 8.5) * 0.28;
         float bL2 = fbm(dir * 6.0 - t * 0.14 + 12.0) * 0.08;
         float rB = radius * (0.38 + bL1 + bL2);
         float blobB = 1.0 - smoothstep(rB * 0.94, rB * 1.25, dist);
 
-        // 중담묵: 담묵과 중묵 사이 추가 레이어
         float mL1 = fbm(dir * 2.0 + t * 0.17 + 4.6) * 0.30;
         float mL2 = fbm(dir * 5.5 - t * 0.13 + 9.2) * 0.09;
         float rM = radius * (0.44 + mL1 + mL2);
         float blobM = 1.0 - smoothstep(rM * 0.50, rM, dist);
 
-        // 담묵: 크고 불규칙한 외곽
         float aL1 = fbm(dir * 1.7 + t * 0.16) * 0.34;
         float aL2 = fbm(dir * 4.8 - t * 0.13 + 2.3) * 0.10;
         float aL3 = fbm(dir * 10.5 + t * 0.26 + 5.2) * 0.03;
         float rA = radius * (0.52 + aL1 + aL2 + aL3);
         float blobA = 1.0 - smoothstep(rA * 0.50, rA, dist);
 
-        // 클립: 레이어 중첩 순서 보장
         blobM = min(blobM, blobA);
         blobB = min(blobB, blobM);
         blobC = min(blobC, blobB);
 
-        float alpha = max(blobA * 0.26, max(blobM * 0.44, max(blobB * 0.62, blobC * 0.97)));
+        float a = max(blobA * 0.26, max(blobM * 0.44, max(blobB * 0.62, blobC * 0.97)));
+        float fade = 1.0 - smoothstep(radius * 0.72, radius * 0.92, dist);
+        return clamp(a * fade, 0.0, 1.0);
+      }
 
-        // 균일 페이드
-        float globalFade = 1.0 - smoothstep(radius * 0.72, radius * 0.92, dist);
-        alpha *= globalFade;
-        alpha = clamp(alpha, 0.0, 1.0);
+      void main() {
+        if (uProgress <= 0.001) {
+          gl_FragColor = vec4(0.0);
+          return;
+        }
+
+        // 9-tap Gaussian blur (σ ≈ 10px) — 셰이더 내부 계산이므로 투명 가장자리 영향 없음
+        vec2 s = 10.0 / uResolution;
+        float alpha =
+          inkAlpha(vUv + vec2(-s.x, -s.y)) * 0.0625 +
+          inkAlpha(vUv + vec2( 0.0, -s.y)) * 0.125  +
+          inkAlpha(vUv + vec2( s.x, -s.y)) * 0.0625 +
+          inkAlpha(vUv + vec2(-s.x,  0.0)) * 0.125  +
+          inkAlpha(vUv               ) * 0.25   +
+          inkAlpha(vUv + vec2( s.x,  0.0)) * 0.125  +
+          inkAlpha(vUv + vec2(-s.x,  s.y)) * 0.0625 +
+          inkAlpha(vUv + vec2( 0.0,  s.y)) * 0.125  +
+          inkAlpha(vUv + vec2( s.x,  s.y)) * 0.0625;
 
         vec3 inkColor = vec3(0.025);
         gl_FragColor = vec4(inkColor, alpha);
