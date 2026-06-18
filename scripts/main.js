@@ -38,9 +38,9 @@ function setHeroTitleStep() {
   initialTitle.classList.toggle("is-active", initialProgress < 0.92);
   nextTitle.classList.toggle("is-active", showNextTitle);
   initialTitle.style.opacity = `${1 - initialProgress}`;
-  initialTitle.style.transform = `translate3d(0, ${-34 * initialProgress}px, 0)`;
+  initialTitle.style.transform = `translate3d(0, ${(-34 / 1920 * 100 * initialProgress).toFixed(3)}vw, 0)`;
   nextTitle.style.opacity = `${nextProgress}`;
-  nextTitle.style.transform = `translate3d(0, ${34 * (1 - nextProgress)}px, 0)`;
+  nextTitle.style.transform = `translate3d(0, ${(34 / 1920 * 100 * (1 - nextProgress)).toFixed(3)}vw, 0)`;
 }
 
 function smoothProgress(value, start, end) {
@@ -66,7 +66,7 @@ function setChangeObjectInteraction() {
   const textRect = storyChangeTextPanel.getBoundingClientRect();
   const objectGap = Math.min(170, Math.max(88, window.innerHeight * 0.1));
   const objectTop = Math.min(window.innerHeight * 0.82, textRect.bottom + objectGap);
-  storyPageChange.style.setProperty("--change-object-top", `${objectTop}px`);
+  storyPageChange.style.setProperty("--change-object-top", `${(objectTop / window.innerHeight * 100).toFixed(3)}svh`);
 
   changeObjects.forEach((object, index) => {
     const start = index * 0.14;
@@ -80,9 +80,9 @@ function setChangeObjectInteraction() {
     const blur = exitProgress * 5;
 
     object.style.opacity = `${visibility}`;
-    object.style.filter = blur > 0.1 ? `blur(${blur}px)` : "";
+    object.style.filter = blur > 0.1 ? `blur(${(blur / 1920 * 100).toFixed(3)}vw)` : "";
     object.style.zIndex = `${changeObjects.length - index}`;
-    object.style.transform = `translate3d(-50%, calc(-50% + ${translateY}px), 0) scale(${scale})`;
+    object.style.transform = `translate3d(-50%, calc(-50% + ${(translateY / 1920 * 100).toFixed(3)}vw), 0) scale(${scale})`;
   });
 }
 
@@ -109,14 +109,14 @@ function setKingPeopleScene() {
   const frameFillOpacity = Math.max(0, Math.min(0.38, maskProgress * (1 - videoOpacity) * 0.38));
   const videoMaskSize = 1 + maskProgress * 99;
   const videoOffset = (1 - videoOpacity) * 5;
-  const copyOffset = (1 - copyProgress) * 18;
+  const copyOffset = (1 - copyProgress) * (18 / 1920 * 100);
 
   kingPeopleSection.style.setProperty("--king-video-mask-size", `${videoMaskSize.toFixed(2)}%`);
   kingPeopleSection.style.setProperty("--king-frame-fill-opacity", frameFillOpacity.toFixed(3));
   kingPeopleSection.style.setProperty("--king-video-opacity", videoOpacity.toFixed(3));
   kingPeopleSection.style.setProperty("--king-video-offset", `${videoOffset.toFixed(2)}svh`);
   kingPeopleSection.style.setProperty("--king-video-copy-opacity", copyProgress.toFixed(3));
-  kingPeopleSection.style.setProperty("--king-video-copy-offset", `${copyOffset.toFixed(2)}px`);
+  kingPeopleSection.style.setProperty("--king-video-copy-offset", `${copyOffset.toFixed(3)}vw`);
 }
 
 setKingPeopleScene();
@@ -707,7 +707,7 @@ function initSoundCollisionExperience() {
     }
 
     applyCrackSurfaces(group, type === "kieuk" ? -1 : 1);
-    group.scale.setScalar(window.matchMedia("(max-width: 768px)").matches ? 0.76 : 1.08);
+    group.scale.setScalar(window.matchMedia("(max-width: 48em)").matches ? 0.76 : 1.08);
     return group;
   }
 
@@ -751,7 +751,7 @@ function initSoundCollisionExperience() {
       }
     });
 
-    const particleCount = window.matchMedia("(max-width: 768px)").matches ? 760 : 1900;
+    const particleCount = window.matchMedia("(max-width: 48em)").matches ? 760 : 1900;
     const positions = new Float32Array(particleCount * 3);
     const velocities = new Float32Array(particleCount * 3);
 
@@ -775,7 +775,7 @@ function initSoundCollisionExperience() {
       depthWrite: false,
       uniforms: {
         uOpacity: { value: 0 },
-        uSize: { value: window.matchMedia("(max-width: 768px)").matches ? 0.045 : 0.032 },
+        uSize: { value: window.matchMedia("(max-width: 48em)").matches ? 0.045 : 0.032 },
       },
       vertexShader: `
         uniform float uSize;
@@ -928,7 +928,7 @@ function initSoundCollisionExperience() {
   function resize() {
     const width = Math.max(1, root.clientWidth);
     const height = Math.max(1, root.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.matchMedia("(max-width: 768px)").matches ? 1.25 : 1.75));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.matchMedia("(max-width: 48em)").matches ? 1.25 : 1.75));
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -986,7 +986,7 @@ function initSoundCollisionExperience() {
           console.error("Sound collision interaction failed to start.", error);
         }
       },
-      { rootMargin: "80% 0px" },
+      { rootMargin: "80% 0" },
     );
     observer.observe(root);
   }
@@ -1154,7 +1154,7 @@ function initInkOverlay(container, menuEl) {
           return;
         }
 
-        // 담묵: σ ≈ 1px
+        // 담묵
         vec2 sA = 1.0 / uResolution;
         float alphaOuter =
           inkOuter(vUv + vec2(-sA.x, -sA.y)) * 0.0625 +
@@ -1167,7 +1167,7 @@ function initInkOverlay(container, menuEl) {
           inkOuter(vUv + vec2(  0.0,  sA.y)) * 0.125  +
           inkOuter(vUv + vec2( sA.x,  sA.y)) * 0.0625;
 
-        // 중담묵: σ ≈ 5px
+        // 중담묵
         vec2 sM = 5.0 / uResolution;
         float alphaMid =
           inkMid(vUv + vec2(-sM.x, -sM.y)) * 0.0625 +
@@ -1180,7 +1180,7 @@ function initInkOverlay(container, menuEl) {
           inkMid(vUv + vec2(  0.0,  sM.y)) * 0.125  +
           inkMid(vUv + vec2( sM.x,  sM.y)) * 0.0625;
 
-        // 중묵/농묵: σ ≈ 12px
+        // 중묵/농묵
         vec2 sI = 12.0 / uResolution;
         float alphaInner =
           inkInner(vUv + vec2(-sI.x, -sI.y)) * 0.0625 +
@@ -1685,10 +1685,10 @@ initHangulReveal(
   function setupCells(scene) {
     const carousel = scene.querySelector(".carousel");
     const cells    = carousel.querySelectorAll(".carousel__cell");
-    const radius   = parseFloat(scene.dataset.radius) || 400;
+    const radius   = (parseFloat(scene.dataset.radius) || 400) / 1920 * 100;
     const step     = 360 / cells.length;
     cells.forEach((cell, i) => {
-      cell.style.transform = `rotateY(${i * step}deg) translateZ(${radius}px)`;
+      cell.style.transform = `rotateY(${i * step}deg) translateZ(${radius.toFixed(3)}vw)`;
     });
   }
 
