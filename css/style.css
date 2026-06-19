@@ -607,7 +607,7 @@ a {
 .record-cylinder-stage {
   position: absolute;
   inset: 0;
-  perspective: 800px;
+  perspective: max(800px, 41.667vw);
   perspective-origin: 50% 50%;
 }
 
@@ -620,7 +620,7 @@ a {
 
 .record-cylinder-item {
   position: absolute;
-  width: clamp(220px, 20vw, 280px);
+  width: max(280px, 14.583vw);
 }
 
 .record-cylinder-item img {
