@@ -829,7 +829,7 @@ a {
 
 .story-page-change {
   --change-object-left: 74%;
-  --change-object-top: 58svh;
+  --change-object-top: 50svh;
   min-height: 500svh;
 }
 

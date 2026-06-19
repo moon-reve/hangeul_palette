@@ -94,10 +94,7 @@ function setChangeObjectInteraction() {
   storyPageChange.classList.toggle("is-change-pinned", isPinned);
   storyPageChange.classList.toggle("is-change-released", isReleased);
 
-  const textRect = storyChangeTextPanel.getBoundingClientRect();
-  const textCenter = textRect.top + textRect.height * 0.56;
-  const objectTop = Math.min(window.innerHeight * 0.76, Math.max(window.innerHeight * 0.3, textCenter));
-  storyPageChange.style.setProperty("--change-object-top", `${(objectTop / window.innerHeight * 100).toFixed(3)}svh`);
+  storyPageChange.style.setProperty("--change-object-top", "50svh");
 
   changeObjects.forEach((object, index) => {
     const start = index * 0.14;
