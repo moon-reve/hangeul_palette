@@ -6,6 +6,7 @@ const nextTitle = document.querySelector(".hero-title-next");
 const kingPeopleSection = document.querySelector(".section-king-people");
 const kingPeopleVideoScene = document.querySelector(".king-people-scene-video");
 const kingPeopleVideoFrame = document.querySelector(".king-people-video-frame");
+const kingPeopleHeartSection = document.querySelector(".section-king-heart");
 const heroWebgl = document.querySelector(".hero-webgl");
 const kingPeopleWebgl = document.querySelector(".king-people-webgl");
 const kingPeopleHeartWebgl = document.querySelector(".king-people-heart-webgl");
@@ -43,6 +44,12 @@ let kingPeopleCopyAutoProgress = 0;
 const KING_PEOPLE_MASK_FINAL_SIZE = 100;
 const KING_PEOPLE_MASK_AUTO_DURATION = 1400;
 const KING_PEOPLE_COPY_AUTO_DURATION = 820;
+let kingPeopleHeartAnimationFrame = null;
+let kingPeopleHeartAnimationStart = null;
+let kingPeopleHeartAnimationFrom = 0;
+let kingPeopleHeartAnimationTo = 0;
+let kingPeopleHeartTextProgress = 0;
+const KING_PEOPLE_HEART_TEXT_DURATION = 860;
 let changeObjectStep = -1;
 let changeObjectProgress = 0;
 let changeObjectAnimationFrame = null;
@@ -58,6 +65,7 @@ function updateScrollLinkedScenes() {
   setChangeObjectInteraction();
   setHeartVideoInteraction();
   setKingPeopleScene();
+  setKingPeopleHeartText();
 }
 
 function requestScrollLinkedUpdate() {
@@ -529,6 +537,89 @@ function handleKingPeopleWheel(event) {
   }
 }
 
+function animateKingPeopleHeartText(now) {
+  if (kingPeopleHeartAnimationStart === null) {
+    kingPeopleHeartAnimationStart = now;
+  }
+
+  const elapsed = now - kingPeopleHeartAnimationStart;
+  const progress = Math.min(1, elapsed / KING_PEOPLE_HEART_TEXT_DURATION);
+  const easedProgress = 1 - Math.pow(1 - progress, 3);
+  kingPeopleHeartTextProgress = kingPeopleHeartAnimationFrom + (kingPeopleHeartAnimationTo - kingPeopleHeartAnimationFrom) * easedProgress;
+  setKingPeopleHeartText();
+
+  if (progress < 1) {
+    kingPeopleHeartAnimationFrame = requestAnimationFrame(animateKingPeopleHeartText);
+  } else {
+    kingPeopleHeartTextProgress = kingPeopleHeartAnimationTo;
+    kingPeopleHeartAnimationFrame = null;
+    kingPeopleHeartAnimationStart = null;
+    setKingPeopleHeartText();
+  }
+}
+
+function goToKingPeopleHeartTextProgress(progress) {
+  const nextProgress = Math.min(1, Math.max(0, progress));
+
+  if (nextProgress === kingPeopleHeartTextProgress || kingPeopleHeartAnimationFrame !== null) {
+    return;
+  }
+
+  kingPeopleHeartAnimationStart = null;
+  kingPeopleHeartAnimationFrom = kingPeopleHeartTextProgress;
+  kingPeopleHeartAnimationTo = nextProgress;
+  kingPeopleHeartAnimationFrame = requestAnimationFrame(animateKingPeopleHeartText);
+}
+
+function handleKingPeopleHeartWheel(event) {
+  if (!kingPeopleHeartSection) {
+    return;
+  }
+
+  const rect = kingPeopleHeartSection.getBoundingClientRect();
+  const isActive = rect.top <= 0 && rect.bottom > window.innerHeight;
+
+  if (!isActive) {
+    return;
+  }
+
+  if (kingPeopleHeartAnimationFrame !== null) {
+    event.preventDefault();
+    return;
+  }
+
+  if (event.deltaY > 0 && kingPeopleHeartTextProgress < 1) {
+    event.preventDefault();
+    goToKingPeopleHeartTextProgress(1);
+    return;
+  }
+
+  if (event.deltaY < 0 && kingPeopleHeartTextProgress > 0) {
+    event.preventDefault();
+    goToKingPeopleHeartTextProgress(0);
+  }
+}
+
+function setKingPeopleHeartText() {
+  if (!kingPeopleHeartSection) {
+    return;
+  }
+
+  const rect = kingPeopleHeartSection.getBoundingClientRect();
+
+  if (rect.top > 0 && kingPeopleHeartAnimationFrame === null) {
+    kingPeopleHeartTextProgress = 0;
+  }
+
+  const progress = Math.min(1, Math.max(0, kingPeopleHeartTextProgress));
+  const blur = (1 - progress) * 18;
+  const offset = (1 - progress) * 2.4;
+
+  kingPeopleHeartSection.style.setProperty("--king-heart-text-opacity", progress.toFixed(3));
+  kingPeopleHeartSection.style.setProperty("--king-heart-text-blur", blur.toFixed(2) + "px");
+  kingPeopleHeartSection.style.setProperty("--king-heart-text-offset", offset.toFixed(3) + "vw");
+}
+
 function setKingPeopleScene() {
   if (!kingPeopleSection || !kingPeopleVideoScene || !kingPeopleVideoFrame) {
     return;
@@ -570,7 +661,10 @@ function setKingPeopleScene() {
 
 setKingPeopleScene();
 window.addEventListener("wheel", handleKingPeopleWheel, { passive: false });
+setKingPeopleHeartText();
+window.addEventListener("wheel", handleKingPeopleHeartWheel, { passive: false });
 window.addEventListener("resize", setKingPeopleScene);
+window.addEventListener("resize", setKingPeopleHeartText);
 
 function initInkOverlay(container, menuEl) {
   if (!container || !menuEl) return;

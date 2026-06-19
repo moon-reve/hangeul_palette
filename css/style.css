@@ -1350,9 +1350,13 @@ a {
 
 .section-king-heart {
   position: relative;
-  height: 100svh;
-  overflow: hidden;
+  width: 100vw;
+  min-height: 200vh;
+  overflow: clip;
   background: #e1e1e1;
+  --king-heart-text-opacity: 0;
+  --king-heart-text-blur: 18px;
+  --king-heart-text-offset: 2.4vw;
 }
 
 .section-king-heart::after {
@@ -1373,6 +1377,13 @@ a {
 }
 
 .king-people-scene-heart {
+  position: sticky;
+  inset: auto;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
   z-index: 1;
 }
 
@@ -1387,13 +1398,14 @@ a {
   z-index: 0;
   width: 100%;
   height: 100%;
+  opacity: 0.4;
   object-fit: cover;
   object-position: center bottom;
 }
 
 .king-people-scene-heart .king-people-heart-webgl {
   z-index: 1;
-  background: #e1e1e1;
+  background: transparent;
 }
 
 .king-people-video-frame {
@@ -1489,8 +1501,11 @@ a {
   top: calc(321 / 1080 * 100%);
   width: min(32.24vw, 32.2396vw);
   color: #000;
-  transform: translateX(-50%);
+  opacity: var(--king-heart-text-opacity);
+  filter: blur(var(--king-heart-text-blur));
+  transform: translate3d(-50%, var(--king-heart-text-offset), 0);
   text-align: center;
+  will-change: opacity, filter, transform;
 }
 
 .king-people-title-number,
