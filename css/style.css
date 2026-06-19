@@ -1111,7 +1111,7 @@ a {
 
 .sound-interaction {
   position: relative;
-  min-height: 800svh;
+  min-height: 640svh;
   z-index: 2;
 }
 
@@ -1194,7 +1194,12 @@ a {
 }
 
 .sound-letter-body {
-  filter: url("#soundConcreteDisplace");
+  filter: none;
+}
+
+.sound-letter > .sound-letter-rim,
+.sound-letter-stroke .sound-letter-rim {
+  display: none;
 }
 
 .aff-letter-stroke {

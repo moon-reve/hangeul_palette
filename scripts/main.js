@@ -786,8 +786,9 @@ function initSoundCollisionExperience() {
         aoContext.save();
         aoContext.globalCompositeOperation = "multiply";
 
+        // Crack lines removed â€” replaced by SVG chunk polygons
         cracks.forEach((crackLine) => {
-          const lineProgress = Math.min(1, Math.max(0, (progress - crackLine.delay) / 0.34));
+          const lineProgress = 0;
           if (lineProgress <= 0) {
             return;
           }
@@ -1384,7 +1385,7 @@ function initInkOverlay(container, menuEl) {
         return v;
       }
 
-      // ?´ë¬µ(blobA) ?„ìš© ??ë¸”ëŸ¬ë¥??ê²Œ ì¤??ˆì´??
+      // ?ï¿½ë¬µ(blobA) ?ï¿½ìš© ??ë¸”ëŸ¬ï¿½??ï¿½ê²Œ ï¿½??ï¿½ì´??
       float inkOuter(vec2 uv) {
         vec2 p = uv - vec2(1.0, 1.0);
         p.x *= uResolution.x / uResolution.y;
@@ -1403,7 +1404,7 @@ function initInkOverlay(container, menuEl) {
         return clamp(blobA * 0.26 * fade, 0.0, 1.0);
       }
 
-      // ì¤‘ë‹´ë¬??„ìš©
+      // ì¤‘ë‹´ï¿½??ï¿½ìš©
       float inkMid(vec2 uv) {
         vec2 p = uv - vec2(1.0, 1.0);
         p.x *= uResolution.x / uResolution.y;
@@ -1429,7 +1430,7 @@ function initInkOverlay(container, menuEl) {
         return clamp(blobM * 0.44 * fade, 0.0, 1.0);
       }
 
-      // ì¤‘ë¬µ + ?ë¬µ
+      // ì¤‘ë¬µ + ?ï¿½ë¬µ
       float inkInner(vec2 uv) {
         vec2 p = uv - vec2(1.0, 1.0);
         p.x *= uResolution.x / uResolution.y;
@@ -1473,7 +1474,7 @@ function initInkOverlay(container, menuEl) {
           return;
         }
 
-        // ?´ë¬µ
+        // ?ï¿½ë¬µ
         vec2 sA = 1.0 / uResolution;
         float alphaOuter =
           inkOuter(vUv + vec2(-sA.x, -sA.y)) * 0.0625 +
@@ -1486,7 +1487,7 @@ function initInkOverlay(container, menuEl) {
           inkOuter(vUv + vec2(  0.0,  sA.y)) * 0.125  +
           inkOuter(vUv + vec2( sA.x,  sA.y)) * 0.0625;
 
-        // ì¤‘ë‹´ë¬?
+        // ì¤‘ë‹´ï¿½?
         vec2 sM = 5.0 / uResolution;
         float alphaMid =
           inkMid(vUv + vec2(-sM.x, -sM.y)) * 0.0625 +
@@ -1499,7 +1500,7 @@ function initInkOverlay(container, menuEl) {
           inkMid(vUv + vec2(  0.0,  sM.y)) * 0.125  +
           inkMid(vUv + vec2( sM.x,  sM.y)) * 0.0625;
 
-        // ì¤‘ë¬µ/?ë¬µ
+        // ì¤‘ë¬µ/?ï¿½ë¬µ
         vec2 sI = 12.0 / uResolution;
         float alphaInner =
           inkInner(vUv + vec2(-sI.x, -sI.y)) * 0.0625 +
@@ -1722,12 +1723,23 @@ function initSoundCollisionInteraction(sticky) {
   const affRightLetter = root.querySelector('[data-aff-letter="chieut"]');
   const fricLeftLetter = root.querySelector('[data-fric-letter="siot"]');
   const fricRightLetter = root.querySelector('[data-fric-letter="ssangsiot"]');
+  const fricLeftStrokes = fricLeftLetter ? Array.from(fricLeftLetter.querySelectorAll(":scope > .aff-letter-stroke")) : [];
+  const fricRightStrokes = fricRightLetter ? Array.from(fricRightLetter.querySelectorAll(":scope > .aff-letter-stroke")) : [];
+  const fricDissolveStrokes = [
+    { el: fricLeftStrokes[1], delay: 0 },
+    { el: fricRightStrokes[0], delay: 0 },
+    { el: fricLeftStrokes[0], delay: 0.38 },
+    { el: fricRightStrokes[1], delay: 0.22 },
+    { el: fricRightStrokes[2], delay: 0.28 },
+    { el: fricRightStrokes[3], delay: 0.48 },
+  ].filter(({ el }) => el).map(({ el, delay }) => ({ el, delay, length: el.getTotalLength() }));
   const leftBody = root.querySelector('[data-body="kieuk"]');
   const rightBody = root.querySelector('[data-body="tikeut"]');
   const leftRim  = leftLetter.querySelector(':scope > .sound-letter-rim');
   const rightRim = rightLetter.querySelector(':scope > .sound-letter-rim');
   const fragments = Array.from(root.querySelectorAll(".sound-fragment"));
   const letterCracks = Array.from(root.querySelectorAll(".sound-letter-crack"));
+  const strokeCracks = Array.from(root.querySelectorAll(".sound-stroke-crack"));
   const kieukStrokeEls = Array.from(root.querySelectorAll('[data-letter="kieuk"].sound-letter-stroke'));
   const tikeutStrokeEls = Array.from(root.querySelectorAll('[data-letter="tikeut"].sound-letter-stroke'));
   const kieukDrifts = [[-75, -110], [-85, 95], [40, 30]];
@@ -1761,66 +1773,87 @@ function initSoundCollisionInteraction(sticky) {
     return `M ${sx} ${sy} Q ${qx} ${qy} ${ex} ${ey}`;
   }
 
-  // stroke-width=104 ¡æ cap radius=52, so arc center must be >52 units from tip.
+  // stroke-width=104 ï¿½ï¿½ cap radius=52, so arc center must be >52 units from tip.
   // Use off=70 (safely outside cap), r/b=32 for inner, 50 for outer.
 
-  // ¤¸: Á¢ÃË ¹Ý´ëÂÊ ¿Ü°û tip¸¸ (bar-left, bar-right, bot-left) ? bot-right´Â Á¢ÃËºÎ¶ó Á¦°Å
+  // ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ ï¿½Ý´ï¿½ï¿½ï¿½ ï¿½Ü°ï¿½ tipï¿½ï¿½ (bar-left, bar-right, bot-left) ? bot-rightï¿½ï¿½ ï¿½ï¿½ï¿½ËºÎ¶ï¿½ ï¿½ï¿½ï¿½ï¿½
   const jieutArcPaths = [
     makeAffPath(bracketArc(212,186, -1,0, 70,32,32), 13),
     makeAffPath(bracketArc(212,186, -1,0, 96,32,32), 13),
-    makeAffPath(bracketArc(648,186, -1,0, -76,32,32), 13),
-    makeAffPath(bracketArc(648,186, -1,0, -102,32,32), 13),
+    makeAffPath(bracketArc(648,186,  1,0,  76,32,32), 13),
+    makeAffPath(bracketArc(648,186,  1,0, 102,32,32), 13),
     makeAffPath(bracketArc(202,582, -0.546,0.838, 70,32,32), 13),
     makeAffPath(bracketArc(202,582, -0.546,0.838, 96,32,32), 13),
   ];
   if (affLeftLetter) jieutArcPaths.forEach(p => affLeftLetter.appendChild(p));
 
-  // ¤º: Á¢ÃË ¹Ý´ëÂÊ ¿Ü°û tip¸¸ (top, bar-right, bot-right) ? bot-left´Â Á¢ÃËºÎ¶ó Á¦°Å
+  // ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ ï¿½Ý´ï¿½ï¿½ï¿½ ï¿½Ü°ï¿½ tipï¿½ï¿½ (top, bar-right, bot-right) ? bot-leftï¿½ï¿½ ï¿½ï¿½ï¿½ËºÎ¶ï¿½ ï¿½ï¿½ï¿½ï¿½
   const chieutArcPaths = [
     makeAffPath(bracketArc(382,100, -1,0, 70,28,28), 13),
     makeAffPath(bracketArc(382,100, -1,0, 96,28,28), 13),
     makeAffPath(bracketArc(382,100,  1,0, 70,28,28), 13),
     makeAffPath(bracketArc(382,100,  1,0, 96,28,28), 13),
-    makeAffPath(bracketArc(612,286, -1,0, -76,32,32), 13),
-    makeAffPath(bracketArc(612,286, -1,0, -102,32,32), 13),
+    makeAffPath(bracketArc(612,286,  1,0,  76,32,32), 13),
+    makeAffPath(bracketArc(612,286,  1,0, 102,32,32), 13),
     makeAffPath(bracketArc(606,598,  0.726,0.687, 70,32,32), 13),
     makeAffPath(bracketArc(606,598,  0.726,0.687, 96,32,32), 13),
   ];
   if (affRightLetter) chieutArcPaths.forEach(p => affRightLetter.appendChild(p));
 
-  // ¤¸ ¿À¸¥ÂÊ ´Ù¸® ³¡(660,588) bracket arcs ? outward=(0.542,0.840)
+  // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù¸ï¿½ ï¿½ï¿½(660,588) bracket arcs ? outward=(0.542,0.840)
   const frictionPaths = [
     makeAffPath(bracketArc(660,588, 0.542,0.840, 76,32,32), 13),
     makeAffPath(bracketArc(660,588, 0.542,0.840, 102,32,32), 13),
   ];
   if (affLeftLetter) frictionPaths.forEach(p => affLeftLetter.appendChild(p));
 
-  // Fricative collision particles
+  // Fricative collision dust: fine grains that open from the contact edge.
   const fricParticles = [];
   {
     let rng = 83;
     const rand = () => { rng = (rng * 1664525 + 1013904223) >>> 0; return rng / 4294967296; };
-    for (let i = 0; i < 65; i++) {
-      const isChip = rand() > 0.42;
-      const size = isChip ? 12 + rand() * 28 : 5 + rand() * 14;
-      const angle = rand() * Math.PI;           // 0(¿ì) ~ ¥ð(ÁÂ): ¾Æ·¡ÂÊ ¹Ý¿ø ÀüÃ¼
-      const speed = 60 + rand() * 360;
-      const delay = rand() * 0.38;
-      let el;
-      if (isChip) {
-        el = document.createElementNS(SVG_NS, "rect");
-        el.setAttribute("width", size.toFixed(1));
-        el.setAttribute("height", (size * 0.65).toFixed(1));
-        el.setAttribute("rx", "2");
-      } else {
-        el = document.createElementNS(SVG_NS, "circle");
-        el.setAttribute("r", (size * 0.5).toFixed(1));
-      }
-      el.setAttribute("fill", "#030303");
+    for (let i = 0; i < 3200; i++) {
+      const strokeIndex = i % 2;
+      const side = strokeIndex === 0 ? -1 : 1;
+      // Almost all particles are tiny dust: 85% micro dots, 15% small grains
+      const sizeRoll = rand();
+      const size = sizeRoll < 0.85
+        ? 0.18 + Math.pow(rand(), 1.2) * 1.6   // micro dust ~0.18-1.8px
+        : 1.4 + Math.pow(rand(), 2.8) * 3.2;   // small grains ~1.4-4.6px
+      const band = Math.pow(rand(), 0.62);
+      const spray = Math.pow(rand(), 1.25);
+      const delay = rand() * 0.004;
+      const spreadX = side * (40 + band * 360 + spray * 420);
+      const spreadY = (rand() - 0.5) * (260 + band * 520) + Math.sin(band * Math.PI) * 95;
+      const lift = -20 - rand() * 72;
+      const fall = 26 + rand() * 210;
+      const spin = (rand() - 0.5) * 800;
+      // All particles are circles/ellipses â€” no polygons for dust
+      const el = document.createElementNS(SVG_NS, "ellipse");
+      const rx = size * (0.55 + rand() * 0.6);
+      const ry = size * (0.45 + rand() * 0.55);
+      el.setAttribute("rx", rx.toFixed(2));
+      el.setAttribute("ry", ry.toFixed(2));
+      const shade = rand();
+      const fill = shade < 0.18 ? "#111111"
+        : shade < 0.42 ? "#2a2a2a"
+        : shade < 0.65 ? "#444444"
+        : shade < 0.80 ? "#636363"
+        : shade < 0.92 ? "#888888"
+        : "#aaaaaa";
+      el.setAttribute("fill", fill);
       el.setAttribute("opacity", "0");
-      el.dataset.angle = angle;
-      el.dataset.speed = speed;
-      el.dataset.delay = delay;
+      el.dataset.strokeIndex = strokeIndex;
+      el.dataset.side = side;
+      el.dataset.delay = delay.toFixed(3);
+      el.dataset.band = band.toFixed(3);
+      el.dataset.spreadX = spreadX.toFixed(2);
+      el.dataset.spreadY = spreadY.toFixed(2);
+      el.dataset.lift = lift.toFixed(2);
+      el.dataset.fall = fall.toFixed(2);
+      el.dataset.spin = spin.toFixed(2);
+      el.dataset.size = size.toFixed(2);
+      el.dataset.alpha = (0.45 + rand() * 0.55).toFixed(3);
       svg.appendChild(el);
       fricParticles.push(el);
     }
@@ -1833,6 +1866,13 @@ function initSoundCollisionInteraction(sticky) {
     velocity: 0,
     previous: 0,
   };
+  const affricateStart = 0.60;
+  const affricateDuration = 0.60;
+  const fricativeTitleStart = 1.14;
+  const fricativeTitleEnd = 1.20;
+  const fricativeStart = 1.20;
+  const fricativeDuration = 0.60;
+  const soundTimelineDuration = fricativeStart + fricativeDuration;
 
   const ScrollTrigger = window.ScrollTrigger || {
     create: createSoundCollisionScrollTrigger,
@@ -1849,16 +1889,16 @@ function initSoundCollisionInteraction(sticky) {
   });
 
   function renderFrame(now) {
-    const progress = progressState.scroll;
+    const progress = progressState.scroll * soundTimelineDuration;
     const delta = progress - progressState.previous;
     progressState.velocity += (delta * 42 - progressState.velocity) * 0.18;
     progressState.previous = progress;
 
-    const affPhase = Math.min(1, Math.max(0, (progress - 0.70) / 0.17));
+    const affPhase = Math.min(1, Math.max(0, (progress - affricateStart) / affricateDuration));
     const affApproach = smoothProgress(affPhase, 0.04, 0.42);
     const inAffContact = affApproach > 0.95 && smoothProgress(affPhase, 0.52, 0.62) < 1;
     if (Math.abs(progress - progressState.rendered) > 0.0005 || Math.abs(progressState.velocity) > 0.001 || inAffContact) {
-      const plosiveProgress = Math.min(1, Math.max(0, progress / 0.68));
+      const plosiveProgress = Math.min(1, Math.max(0, progress / 0.60));
       updateSoundCollision(plosiveProgress, progressState.velocity, now * 0.001);
       updateAffricateCollision(progress, progressState.velocity, now * 0.001);
       updateFricativeCollision(progress, progressState.velocity, now * 0.001);
@@ -1876,9 +1916,9 @@ function initSoundCollisionInteraction(sticky) {
     const approach = smoothProgress(progress, 0.02, 0.43);
     const impact = 1 - Math.min(1, Math.abs(progress - 0.455) / 0.07);
     const crackProgress = smoothProgress(progress, 0.35, 0.5);
-    const fractureProgress = smoothProgress(progress, 0.43, 0.76);
-    const breakProgress = smoothProgress(progress, 0.58, 0.82);
-    const dissolveProgress = smoothProgress(progress, 0.74, 0.99);
+    const fractureProgress = smoothProgress(progress, 0.43, 0.62);
+    const breakProgress = smoothProgress(progress, 0.47, 0.72);
+    const dissolveProgress = smoothProgress(progress, 0.62, 0.94);
     const heavy = 1 - Math.pow(1 - approach, 3.4);
     const vibration = Math.sin(time * 42) * 4 * approach * (1 - breakProgress) + Math.sin(time * 107) * 1.2 * impact;
     const travel = 760 / letterScale;
@@ -1888,22 +1928,22 @@ function initSoundCollisionInteraction(sticky) {
     const rightStartX = rightImpactX + travel;
     const centerOffset = -204;
 
-    // Ãæµ¹ ÈÄ ¹Ýµ¿: ºü¸£°Ô Æ¨°Ü³µ´Ù°¡ ¼­¼­È÷ ¸ØÃß´Â ease-out
-    const reboundProgress = smoothProgress(progress, 0.58, 0.84);
+    // ï¿½æµ¹ ï¿½ï¿½ ï¿½Ýµï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Æ¨ï¿½Ü³ï¿½ï¿½Ù°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ß´ï¿½ ease-out
+    const reboundProgress = smoothProgress(progress, 0.47, 0.72);
     const reboundEase = 1 - Math.pow(1 - reboundProgress, 2.8);
-    const reboundDist = 60 / letterScale;  // È­¸é»ó ¾à 30px¸¸ µÚ·Î
+    const reboundDist = 60 / letterScale;  // È­ï¿½ï¿½ï¿½ ï¿½ï¿½ 30pxï¿½ï¿½ ï¿½Ú·ï¿½
 
     const leftX  = centerOffset + leftStartX  + (leftImpactX  - leftStartX)  * heavy + vibration - reboundDist * reboundEase;
     const rightX = centerOffset + rightStartX + (rightImpactX - rightStartX) * heavy - vibration + reboundDist * reboundEase;
     const baseY = 0;
 
-    // ¹Ýµ¿ ÀÌÈÄ¿¡ body + rim ÆäÀÌµå (»ìÂ¦ ¶³¾îÁø »óÅÂ¿¡¼­ »ç¶óÁü)
-    const bodyOpacity = 1 - smoothProgress(progress, 0.66, 0.82);
+    // Body fades out as strokes begin separating so original shape disappears simultaneously
+    const bodyOpacity = 1 - smoothProgress(progress, 0.47, 0.62);
     const blur = 0;
-    // ¹Ýµ¿ÇÏ¸é¼­ ±â¿ï±â°¡ ¿ø·¡´ë·Î µ¹¾Æ¿È
+    // ï¿½Ýµï¿½ï¿½Ï¸é¼­ ï¿½ï¿½ï¿½â°¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Æ¿ï¿½
     const leftRotation  = -8 * (1 - heavy) * (1 - breakProgress) + 4 * breakProgress * (1 - reboundEase * 0.7) + vibration * 0.18;
     const rightRotation =  8 * (1 - heavy) * (1 - breakProgress) - 4 * breakProgress * (1 - reboundEase * 0.7) - vibration * 0.18;
-    const isVisible = progress > 0.02 && progress < 0.98 ? 1 : 0;
+    const isVisible = progress > 0.02 && progress < 0.96 ? 1 : 0;
 
     svg.style.transform = "none";
     setLetterTransform(leftLetter, leftX, -410 + baseY, letterScale, leftRotation, 430, 365);
@@ -1922,35 +1962,60 @@ function initSoundCollisionInteraction(sticky) {
     if (leftRim)  leftRim.style.opacity  = bodyOpacity;
     if (rightRim) rightRim.style.opacity = bodyOpacity;
 
-    // È¹ ºÐ¸® + ±×¶óµ¥ÀÌ¼Ç ¼Ò¸ê ¾Ö´Ï¸ÞÀÌ¼Ç
+    // È¹ ï¿½Ð¸ï¿½ + ï¿½×¶ï¿½ï¿½Ì¼ï¿½ ï¿½Ò¸ï¿½ ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½
+    // Per-stroke spin and secondary drift for fragment tumble
+    const kieukSpins  = [-22, 28, -15];
+    const tikeutSpins = [18, -24, 20, -13];
+    const kieukSecondary  = [[0, -18], [0, 20], [22, 0]];
+    const tikeutSecondary = [[0, -16], [0, 14], [0, 22], [-18, 0]];
+
     function animateStrokes(strokeEls, drifts, isLeft) {
+      const spins      = isLeft ? kieukSpins      : tikeutSpins;
+      const secondary  = isLeft ? kieukSecondary  : tikeutSecondary;
       strokeEls.forEach((el, i) => {
-        const [dx, dy] = drifts[i] || [0, 0];
-        // È¹¸¶´Ù »ìÂ¦ ´Ù¸¥ Å¸ÀÌ¹ÖÀ¸·Î ºÐ¸®
-        const stagger = i * 0.04;
-        const localBreak = Math.max(0, smoothProgress(progress, 0.65 + stagger, 0.84));
-        const localDissolve = Math.max(0, smoothProgress(progress, 0.72 + stagger, 0.92));
+        const [dx, dy]   = drifts[i]     || [0, 0];
+        const [sx, sy]   = secondary[i]  || [0, 0];
+        const stagger    = 0;
+
+        // Three phases: break apart â†’ dissolve â†’ become dust
+        const localBreak    = Math.max(0, smoothProgress(progress, 0.47 + stagger, 0.70));
+        const localDissolve = Math.max(0, smoothProgress(progress, 0.52 + stagger, 0.80));
+        const localDust     = Math.max(0, smoothProgress(progress, 0.58 + stagger, 0.92));
 
         if (localBreak <= 0) {
           el.style.opacity = "0";
+          el.style.mask = "";
+          el.style.webkitMask = "";
+          el.style.filter = "";
           return;
         }
 
-        // ºÐ¸® ÀÌµ¿ (SVG transform)
-        const ease = 1 - Math.pow(1 - localBreak, 2.8);
-        const tx = (dx * ease * letterScale).toFixed(2);
-        const ty = (dy * ease * letterScale).toFixed(2);
-        el.setAttribute("transform", `translate(${tx} ${ty})`);
+        // Fast-burst easing for break, slow drift for dust
+        const breakEase = 1 - Math.pow(1 - localBreak, 2.4);
+        const dustEase  = 1 - Math.pow(1 - localDust,  1.7);
 
-        // ±×¶óµ¥ÀÌ¼Ç ¸¶½ºÅ©: Ãæµ¹ ¸é ¹æÇâºÎÅÍ ¼­¼­È÷ Åõ¸íÇØÁü
-        const fadeStart = (localDissolve * 85).toFixed(1);
-        const fadeEnd = Math.min(Number(fadeStart) + 40, 100).toFixed(1);
-        const gradDir = isLeft ? "to left" : "to right";
-        el.style.mask = `linear-gradient(${gradDir}, transparent ${fadeStart}%, black ${fadeEnd}%)`;
-        el.style.webkitMask = el.style.mask;
+        // Primary drift + secondary chaotic drift + spin + slight shrink as mass disintegrates
+        const tx  = ((dx + sx * dustEase * 0.55) * breakEase * letterScale).toFixed(2);
+        const ty  = ((dy + sy * dustEase * 0.55) * breakEase * letterScale).toFixed(2);
+        const rot = ((spins[i] || 0) * breakEase).toFixed(2);
+        const scl = (1 - dustEase * 0.06).toFixed(3);
 
-        // ÀüÃ¼ opacity´Â ¸¶Áö¸·¿¡ ¿ÏÀüÈ÷ ¼Ò¸ê
-        const overallOpacity = Math.max(0, 1 - localDissolve * 1.2);
+        el.style.mask = "";
+        el.style.webkitMask = "";
+
+        // Blur grows as piece crumbles to dust (0 â†’ ~7px)
+        const blurPx = (dustEase * 7).toFixed(1);
+        el.style.filter = blurPx > 0 ? `blur(${blurPx}px)` : "";
+        el.setAttribute("transform", `translate(${tx} ${ty}) rotate(${rot}) scale(${scl})`);
+
+        // Break crack lines: flash white briefly at the moment of fracture then vanish
+        const crackFlash = Math.min(1, localBreak * 10) * Math.max(0, 1 - localBreak * 4);
+        el.querySelectorAll('.sound-stroke-break-crack').forEach(bc => {
+          bc.setAttribute('opacity', crackFlash.toFixed(3));
+        });
+
+        // Whole stroke fades out uniformly
+        const overallOpacity = Math.max(0, 1 - Math.pow(localDust, 1.3) * 1.18);
         el.style.opacity = (localBreak * overallOpacity).toFixed(3);
       });
     }
@@ -1964,10 +2029,27 @@ function initSoundCollisionInteraction(sticky) {
 
     gsapSet(impactCore, { opacity: Math.max(0, impact * 0.95 - breakProgress), scale: 0.35 + impact * 2.1 });
 
-    letterCracks.forEach((crack) => {
+    // Stroke surface cracks: appear as strokes separate, in the non-masked interior zone
+    // crackProgress (0.35-0.5 in outer progress) = plosiveProgress 0.58-0.83 = stroke-break phase
+    strokeCracks.forEach(sc => {
+      const fadeIn  = Math.min(crackProgress * 3.0, 0.92);   // quick fade-in
+      const fadeOut = 1 - smoothProgress(progress, 0.44, 0.50); // fade before strokes dissolve
+      sc.setAttribute("opacity", Math.max(0, fadeIn * fadeOut).toFixed(3));
+    });
+
+    letterCracks.forEach((crack, idx) => {
       const delay = Number(crack.dataset.delay);
       const local = Math.min(1, Math.max(0, crackProgress * 1.6 - delay));
-      crack.style.opacity = `${local * (1 - smoothProgress(progress, 0.72, 0.90))}`;
+      // Fade in with crack progress, then scatter outward and fade with the letter body
+      const breakFade = smoothProgress(progress, 0.47, 0.70);
+      const opacity = local * (1 - breakFade);
+      // As letter breaks apart, each chunk drifts outward and falls slightly
+      const isLeft = idx % 2 === 0;
+      const driftX = breakFade * (isLeft ? -28 : 28) * (0.6 + (idx % 5) * 0.18);
+      const driftY = breakFade * (18 + (idx % 7) * 12);
+      const rotateDeg = breakFade * ((idx % 2 === 0 ? 1 : -1) * (12 + (idx % 6) * 8));
+      crack.setAttribute("transform", `translate(${driftX.toFixed(1)} ${driftY.toFixed(1)}) rotate(${rotateDeg.toFixed(1)})`);
+      crack.style.opacity = `${Math.max(0, opacity)}`;
     });
 
     fragments.forEach((fragment) => {
@@ -2056,7 +2138,7 @@ function initSoundCollisionInteraction(sticky) {
       return;
     }
 
-    const phase = Math.min(1, Math.max(0, (progress - 0.70) / 0.17));
+    const phase = Math.min(1, Math.max(0, (progress - affricateStart) / affricateDuration));
     const width = Math.max(1, root.clientWidth);
     const height = Math.max(1, root.clientHeight);
     const viewportScale = Math.min(width / 1440, height / 900);
@@ -2071,24 +2153,24 @@ function initSoundCollisionInteraction(sticky) {
     const rotateJitter = 0;
     const compression = 0;
     const travel = 760 / letterScale;
-    const leftImpactX = -696 * letterScale;
-    const rightImpactX = -70 * letterScale;
+    const centerOffset = -204;
+    const leftImpactX = -660 * letterScale;
+    const rightImpactX = -158 * letterScale;
     const leftStartX = leftImpactX - travel;
     const rightStartX = rightImpactX + travel;
-    const centerOffset = -204;
     const heavy = 1 - Math.pow(1 - approach, 3.5);
     const exit = 210 / letterScale * release;
     const leftX = centerOffset + leftStartX + (leftImpactX - leftStartX) * heavy + highX - exit;
     const rightX = centerOffset + rightStartX + (rightImpactX - rightStartX) * heavy - highX + exit;
 
     const contact = smoothProgress(phase, 0.38, 0.46) * (1 - smoothProgress(phase, 0.52, 0.62));
-    const vibAmp = contact * 6;
+    const vibAmp = contact * 2.5;
     const vibX = Math.sin(time * 90) * vibAmp;
     const vibY = Math.sin(time * 90 * 1.27 + 1.1) * vibAmp * 0.7;
-    const vibRot = Math.sin(time * 90 * 0.83 + 0.5) * contact * 2.5;
+    const vibRot = Math.sin(time * 90 * 0.83 + 0.5) * contact * 1.0;
 
     const slideAmount = 36;
-    const fricTitleMix = smoothProgress(progress, 0.88, 0.92);
+    const fricTitleMix = smoothProgress(progress, fricativeTitleStart, fricativeTitleEnd);
     gsapSet(plosiveStage, { opacity: titleMix < 1 ? 1 : 0 });
     gsapSet(plosiveTitle, { opacity: 1 - titleMix, y: -slideAmount * titleMix });
     const affricateVisible = titleMix * (1 - smoothProgress(phase, 0.94, 1)) * (1 - fricTitleMix);
@@ -2137,7 +2219,7 @@ function initSoundCollisionInteraction(sticky) {
   function updateFricativeCollision(progress, velocity, time) {
     if (!fricLeftLetter || !fricRightLetter) return;
 
-    const phase = Math.min(1, Math.max(0, (progress - 0.90) / 0.10));
+    const phase = Math.min(1, Math.max(0, (progress - fricativeStart) / fricativeDuration));
     const width = Math.max(1, root.clientWidth);
     const height = Math.max(1, root.clientHeight);
     const viewportScale = Math.min(width / 1440, height / 900);
@@ -2149,19 +2231,65 @@ function initSoundCollisionInteraction(sticky) {
 
     const travel = 760 / letterScale;
     const centerOffset = -204;
-    // ¤µ ¿À¸¥ÂÊ ´Ù¸® ³¡(·ÎÄÃ 660)°ú ¤¶ ¿ÞÂÊ ´Ù¸® ³¡(·ÎÄÃ 102)ÀÌ SVG x=0¿¡¼­ ¸¸³ªµµ·Ï ¿ª»ê
-    const leftImpactX = -centerOffset - 660 * letterScale;   // 204 - 660*ls
-    const rightImpactX = -centerOffset - 102 * letterScale;  // 204 - 102*ls
+    // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù¸ï¿½ ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½ 660)ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ù¸ï¿½ ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½ 102)ï¿½ï¿½ SVG x=0ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+    const leftImpactX = -660 * letterScale;
+    const rightImpactX = -102 * letterScale;
     const leftStartX = leftImpactX - travel;
     const rightStartX = rightImpactX + travel;
 
-    // ½ÖÀÇ ½Ã°¢Àû Áß½ÉÀ» SVG x=0¿¡ ¸ÂÃß±â À§ÇÑ º¸Á¤°ª (-100*ls ÀÌµ¿)
-    const fricCenterShift = -100 * letterScale;
-    const leftX = centerOffset + leftStartX + (leftImpactX - leftStartX) * heavy + fricCenterShift;
-    const rightX = centerOffset + rightStartX + (rightImpactX - rightStartX) * heavy + fricCenterShift;
+    const leftX = centerOffset + leftStartX + (leftImpactX - leftStartX) * heavy;
+    const rightX = centerOffset + rightStartX + (rightImpactX - rightStartX) * heavy;
 
     setAffricateTransform(fricLeftLetter, leftX, -410, letterScale, letterScale, -7 * (1 - heavy), 430, 365);
     setAffricateTransform(fricRightLetter, rightX, -415, letterScale, letterScale, 7 * (1 - heavy), 360, 370);
+
+    function localPointToSvg(target, x, y, fallbackX, fallbackY) {
+      const targetMatrix = target.getScreenCTM ? target.getScreenCTM() : null;
+      const svgMatrix = svg.getScreenCTM ? svg.getScreenCTM() : null;
+      if (!targetMatrix || !svgMatrix || !svg.createSVGPoint) {
+        return { x: fallbackX, y: fallbackY };
+      }
+      const point = svg.createSVGPoint();
+      point.x = x;
+      point.y = y;
+      return point.matrixTransform(targetMatrix).matrixTransform(svgMatrix.inverse());
+    }
+
+    const fallbackLeftContactX = leftX + 660 * letterScale;
+    const fallbackRightContactX = rightX + 102 * letterScale;
+    const fallbackLeftContactY = -410 + 588 * letterScale;
+    const fallbackRightContactY = -415 + 582 * letterScale;
+    const leftContact = localPointToSvg(fricLeftLetter, 660, 588, fallbackLeftContactX, fallbackLeftContactY);
+    const rightContact = localPointToSvg(fricRightLetter, 102, 582, fallbackRightContactX, fallbackRightContactY);
+    const contactX = 0.5 * (leftContact.x + rightContact.x);
+    const contactY = 0.5 * (leftContact.y + rightContact.y);
+
+    const disintegrate = smoothProgress(phase, 0.32, 0.90);
+    const finalFade = 1 - smoothProgress(disintegrate, 0.92, 1);
+
+    fricLeftLetter.style.mask = "";
+    fricLeftLetter.style.webkitMask = "";
+    fricRightLetter.style.mask = "";
+    fricRightLetter.style.webkitMask = "";
+
+    const dissolveEdges = fricDissolveStrokes.map(({ el, delay, length }) => {
+      const local = Math.min(1, Math.max(0, (disintegrate - delay) / Math.max(0.001, 1 - delay)));
+      const eased = 1 - Math.pow(1 - local, 2.35);
+      const visibleLength = Math.max(0.001, length * (1 - eased));
+      el.style.strokeDasharray = `${visibleLength.toFixed(2)} ${length.toFixed(2)}`;
+      el.style.strokeDashoffset = "0";
+      const strokeFade = 1 - smoothProgress(local, 0.02, 1);
+      el.style.opacity = String(visible * finalFade * strokeFade);
+      const edgeLength = Math.min(length - 0.001, visibleLength);
+      const edgePoint = el.getPointAtLength(edgeLength);
+      const prevPoint = el.getPointAtLength(Math.max(0, edgeLength - 18));
+      const svgPoint = localPointToSvg(el, edgePoint.x, edgePoint.y, contactX, contactY);
+      const prevSvgPoint = localPointToSvg(el, prevPoint.x, prevPoint.y, contactX, contactY);
+      const tx = svgPoint.x - prevSvgPoint.x;
+      const ty = svgPoint.y - prevSvgPoint.y;
+      const mag = Math.max(0.001, Math.hypot(tx, ty));
+      return { x: svgPoint.x, y: svgPoint.y, tx: tx / mag, ty: ty / mag, nx: -ty / mag, ny: tx / mag, local, eased, delay };
+    });
 
     gsapSet(fricLeftLetter, {
       opacity: visible,
@@ -2172,41 +2300,46 @@ function initSoundCollisionInteraction(sticky) {
       filter: `drop-shadow(0 ${30 * letterScale}px ${34 * letterScale}px rgba(0,0,0,.42))`,
     });
 
-    // Ãæµ¹ ÁöÁ¡: ¤µ ¿À¸¥ÂÊ ´Ù¸® ³¡(660,588)°ú ¤¶ ¿ÞÂÊ ¿Ü°û ´Ù¸® ³¡(102,582)ÀÇ Áß°£
-    const contactX = 0.5 * (centerOffset + leftImpactX + 660 * letterScale)
-                   + 0.5 * (centerOffset + rightImpactX + 102 * letterScale);
-    const contactY = 0.5 * (-410 + 588 * letterScale) + 0.5 * (-415 + 582 * letterScale);
-
-    const disintegrate = smoothProgress(phase, 0.40, 0.92);
-
     fricParticles.forEach(p => {
       if (visible <= 0 || disintegrate <= 0) {
         p.setAttribute("opacity", "0");
         return;
       }
+
       const delay = Number(p.dataset.delay);
-      if (disintegrate <= delay) {
+      const side = Number(p.dataset.side);
+      const band = Number(p.dataset.band);
+      const streamIndex = Number(p.dataset.strokeIndex);
+      const edge = dissolveEdges[streamIndex] || { x: contactX, y: contactY, local: disintegrate, eased: disintegrate };
+      if (edge.local <= delay) {
         p.setAttribute("opacity", "0");
         return;
       }
-      const localP = Math.min(1, (disintegrate - delay) / (1 - delay));
-      const ease = 1 - Math.pow(1 - localP, 2.4);
-      const scatter = ease * Number(p.dataset.speed);
-      const gravity = ease * ease * 220;
-      const angle = Number(p.dataset.angle);
-      const x = contactX + Math.cos(angle) * scatter;
-      const y = contactY + Math.sin(angle) * scatter + gravity;
-      const opacity = Math.max(0, (1 - smoothProgress(localP, 0.44, 1.0)) * visible);
 
-      if (p.tagName === "circle") {
-        p.setAttribute("cx", x.toFixed(1));
-        p.setAttribute("cy", y.toFixed(1));
-      } else {
-        const w = Number(p.getAttribute("width"));
-        const h = Number(p.getAttribute("height"));
-        p.setAttribute("x", (x - w * 0.5).toFixed(1));
-        p.setAttribute("y", (y - h * 0.5).toFixed(1));
-      }
+      const localP = Math.min(1, Math.max(0, (edge.local - delay) / Math.max(0.001, 1 - delay)));
+      const ssangsiotFollow = streamIndex === 1 ? Math.min(1, edge.local * 1.16 + 0.035) : edge.local;
+      const particleP = streamIndex === 1 ? Math.max(localP, ssangsiotFollow) : localP;
+      const ease = streamIndex === 1 ? 1 - Math.pow(1 - ssangsiotFollow, 2.35) : edge.eased;
+      // Faster lateral spread for powder burst feel
+      const along = Number(p.dataset.spreadY) * letterScale * Math.pow(ease, 0.98);
+      // Faster initial horizontal explosion
+      const powderBase = Number(p.dataset.spreadX) * letterScale * Math.pow(ease, 1.18);
+      const powder = streamIndex === 1 ? powderBase * 0.70 : powderBase;
+      // Stronger lift arc + sharper gravity fall for powder physics
+      const drift = Number(p.dataset.lift) * letterScale * Math.sin(ease * Math.PI * 1.08)
+        + Number(p.dataset.fall) * letterScale * Math.pow(ease, 1.55);
+      // Air turbulence: subtle sinusoidal drift for fine dust
+      const turbulence = Math.sin(time * 3.4 + band * 12.7 + Number(p.dataset.spreadX) * 0.031) * 6 * letterScale * ease;
+      const outside = 78 * letterScale * (0.42 + edge.local * 0.58) * (streamIndex === 1 ? 0.05 : 1);
+      const x = edge.x + edge.tx * along + edge.nx * (outside + powder) + velocity * 5;
+      const y = edge.y + edge.ty * along + edge.ny * (outside + powder) + drift + turbulence;
+      const scale = 0.38 + ease * (0.72 + band * 0.38);
+      const spin = Number(p.dataset.spin) * ease + Math.sin(time * 2.6 + band * 11.3) * 8;
+      // Fine dust lingers longer in air before fading
+      const densityFade = 1 - smoothProgress(particleP, 0.84, 1);
+      const opacity = Math.max(0, visible * Number(p.dataset.alpha) * densityFade * smoothProgress(particleP, 0, 0.18) * (1.10 + (1 - band) * 0.55));
+
+      p.setAttribute("transform", `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${spin.toFixed(2)}) scale(${scale.toFixed(3)})`);
       p.setAttribute("opacity", opacity.toFixed(3));
     });
   }
@@ -2222,17 +2355,17 @@ function buildSoundCollisionMarkup() {
   ].join(" ");
   const tikeutPath = tikeutReferencePath();
 
-  // ºÐ¸®µÉ °³º° È¹ °æ·Î Á¤ÀÇ
+  // ï¿½Ð¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ È¹ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
   const kieukStrokes = [
-    roundedRectPath(170, 118, 520, 104, 52),  // À§ °¡·ÎÈ¹
-    roundedRectPath(170, 332, 502, 104, 52),  // Áß°£ °¡·ÎÈ¹
-    roundedRectPath(580, 118, 116, 492, 52),  // ¼¼·ÎÈ¹
+    roundedRectPath(170, 118, 520, 104, 52),  // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½È¹
+    roundedRectPath(170, 332, 502, 104, 52),  // ï¿½ß°ï¿½ ï¿½ï¿½ï¿½ï¿½È¹
+    roundedRectPath(580, 118, 116, 492, 52),  // ï¿½ï¿½ï¿½ï¿½È¹
   ];
   const tikeutStrokes = [
-    roundedRectPath(70, 110, 548, 104, 52),   // À§ °¡·ÎÈ¹
-    roundedRectPath(70, 310, 556, 104, 52),   // Áß°£ °¡·ÎÈ¹
-    roundedRectPath(70, 520, 554, 104, 52),   // ¾Æ·¡ °¡·ÎÈ¹
-    roundedRectPath(70, 110, 126, 514, 52),   // ¿ÞÂÊ ¼¼·ÎÈ¹
+    roundedRectPath(70, 110, 548, 104, 52),   // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½È¹
+    roundedRectPath(70, 310, 556, 104, 52),   // ï¿½ß°ï¿½ ï¿½ï¿½ï¿½ï¿½È¹
+    roundedRectPath(70, 520, 554, 104, 52),   // ï¿½Æ·ï¿½ ï¿½ï¿½ï¿½ï¿½È¹
+    roundedRectPath(70, 110, 126, 514, 52),   // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½È¹
   ];
 
   const leftFragments = buildImpactFragmentMarkup("kieuk", 18, 42);
@@ -2242,16 +2375,113 @@ function buildSoundCollisionMarkup() {
   const dust = buildDustMarkup();
   const chips = buildChipMarkup();
 
+  // Per-stroke crack line bounds (x, y, w, h of each rounded-rect stroke)
+  const kieukBounds = [
+    { x: 170, y: 118, w: 520, h: 104 },
+    { x: 170, y: 332, w: 502, h: 104 },
+    { x: 580, y: 118, w: 116, h: 492 },
+  ];
+  const tikeutBounds = [
+    { x: 70, y: 110, w: 548, h: 104 },
+    { x: 70, y: 310, w: 556, h: 104 },
+    { x: 70, y: 520, w: 554, h: 104 },
+    { x: 70, y: 110, w: 126, h: 514 },
+  ];
+
+  function buildStrokeCracks(isLeft, bounds, seed) {
+    const rand = createSeededRandom(seed);
+    const { x, y, w, h } = bounds;
+    // The stroke mask dissolves from the contact edge (right for kieuk, left for tikeut).
+    // Place cracks in the OPPOSITE interior zone so they stay in the visible (black-mask) area.
+    // kieuk (isLeft): contact edge = right â†’ cracks in left 15-65% of width
+    // tikeut (!isLeft): contact edge = left â†’ cracks in right 15-65% of width
+    const zoneStart = isLeft ? x + w * 0.10 : x + w * 0.38;
+    const zoneEnd   = isLeft ? x + w * 0.65 : x + w * 0.90;
+    const insetY = Math.max(6, h * 0.14);
+
+    const lines = [];
+    const count = 4 + Math.floor(rand() * 3); // 4-6 cracks
+    for (let i = 0; i < count; i++) {
+      // Random interior start point
+      const sx = zoneStart + rand() * (zoneEnd - zoneStart);
+      const sy = y + insetY + rand() * (h - insetY * 2);
+      const segs = 2 + Math.floor(rand() * 2);
+      const pts = [[sx, sy]];
+      let cx = sx, cy = sy;
+      const totalLen = 18 + rand() * 48;
+      const baseAngle = rand() * Math.PI * 2;
+      for (let s = 0; s < segs; s++) {
+        const a = baseAngle + (rand() - 0.5) * 0.9;
+        cx += Math.cos(a) * (totalLen / segs) * (0.6 + rand() * 0.5);
+        cy += Math.sin(a) * (totalLen / segs) * 0.55;
+        cx = Math.max(zoneStart, Math.min(zoneEnd, cx));
+        cy = Math.max(y + insetY, Math.min(y + h - insetY, cy));
+        pts.push([cx, cy]);
+      }
+      const ptsStr = pts.map(([px, py]) => `${px.toFixed(1)},${py.toFixed(1)}`).join(' ');
+      const sw = (0.9 + rand() * 1.3).toFixed(1);  // 0.9~2.2px
+      const g  = Math.floor(90 + rand() * 100);     // #5a~#c8 gray
+      lines.push(`<polyline class="sound-stroke-crack" points="${ptsStr}" stroke="rgb(${g},${g},${g})" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>`);
+    }
+    return lines.join('');
+  }
+
+  function buildStrokeBreakCracks(bounds, seed) {
+    const rand = createSeededRandom(seed);
+    const { x, y, w, h } = bounds;
+    const isHoriz = w > h;
+    const lines = [];
+    const count = 2 + Math.floor(rand() * 2); // 2-3 cracks per stroke
+    for (let ci = 0; ci < count; ci++) {
+      const pts = [];
+      if (isHoriz) {
+        // Crack runs roughly vertically across the stroke (short axis)
+        const cx = x + w * (0.25 + rand() * 0.50);
+        const segs = 3 + Math.floor(rand() * 2);
+        let px = cx + (rand() - 0.5) * 10;
+        let py = y + h * 0.05;
+        pts.push([px, py]);
+        for (let s = 0; s < segs; s++) {
+          px += (rand() - 0.5) * 18;
+          py += (h * 0.9) / segs * (0.7 + rand() * 0.6);
+          px = Math.max(cx - 22, Math.min(cx + 22, px));
+          py = Math.min(y + h * 0.95, py);
+          pts.push([px, py]);
+        }
+      } else {
+        // Crack runs roughly horizontally across the stroke (short axis)
+        const cy = y + h * (0.25 + rand() * 0.50);
+        const segs = 3 + Math.floor(rand() * 2);
+        let px = x + w * 0.05;
+        let py = cy + (rand() - 0.5) * 10;
+        pts.push([px, py]);
+        for (let s = 0; s < segs; s++) {
+          px += (w * 0.9) / segs * (0.7 + rand() * 0.6);
+          py += (rand() - 0.5) * 18;
+          py = Math.max(cy - 22, Math.min(cy + 22, py));
+          px = Math.min(x + w * 0.95, px);
+          pts.push([px, py]);
+        }
+      }
+      const ptsStr = pts.map(([px, py]) => `${px.toFixed(1)},${py.toFixed(1)}`).join(' ');
+      const sw = (1.2 + rand() * 1.4).toFixed(1);
+      lines.push(`<polyline class="sound-stroke-break-crack" points="${ptsStr}" stroke="rgba(255,255,255,0.88)" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>`);
+    }
+    return lines.join('');
+  }
+
   const kieukStrokeMarkup = kieukStrokes.map((d, i) => `
     <g class="sound-letter-stroke" data-letter="kieuk" data-idx="${i}" style="opacity:0">
-      <path d="${d}" fill="url(#soundConcreteMaterial)" />
-      <path d="${d}" class="sound-letter-rim" />
+      <path d="${d}" fill="#030303" />
+      ${buildStrokeCracks(true, kieukBounds[i], 71 + i * 13)}
+      ${buildStrokeBreakCracks(kieukBounds[i], 131 + i * 19)}
     </g>`).join("");
 
   const tikeutStrokeMarkup = tikeutStrokes.map((d, i) => `
     <g class="sound-letter-stroke" data-letter="tikeut" data-idx="${i}" style="opacity:0">
-      <path d="${d}" fill="url(#soundConcreteMaterial)" />
-      <path d="${d}" class="sound-letter-rim" />
+      <path d="${d}" fill="#030303" />
+      ${buildStrokeCracks(false, tikeutBounds[i], 97 + i * 17)}
+      ${buildStrokeBreakCracks(tikeutBounds[i], 173 + i * 23)}
     </g>`).join("");
 
   return `
@@ -2275,8 +2505,8 @@ function buildSoundCollisionMarkup() {
           </radialGradient>
           <clipPath id="sound-kieuk-clip"><path d="${kieukPath}" /></clipPath>
           <clipPath id="sound-tikeut-clip"><path d="${tikeutPath}" /></clipPath>
-          <!-- ±Õ¿­¼± ±×¶óµ¥ÀÌ¼Ç: Ãæµ¹ ¸é(Èò»ö) ¡æ ¾ÈÂÊ(°ËÁ¤) -->
-          <!-- ±Õ¿­ Æú¸®°ï: ¹è°æ»ö(#e1e1e1)À¸·Î Ã¤¿ö ½ÇÁ¦ Æ´Ã³·³ º¸ÀÌ°Ô -->
+          <!-- ï¿½Õ¿ï¿½ï¿½ï¿½ ï¿½×¶ï¿½ï¿½Ì¼ï¿½: ï¿½æµ¹ ï¿½ï¿½(ï¿½ï¿½ï¿½) ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½) -->
+          <!-- ï¿½Õ¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½(#e1e1e1)ï¿½ï¿½ï¿½ï¿½ Ã¤ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Æ´Ã³ï¿½ï¿½ ï¿½ï¿½ï¿½Ì°ï¿½ -->
           <linearGradient id="crack-grad-kieuk" gradientUnits="userSpaceOnUse" x1="700" y1="0" x2="600" y2="0">
             <stop offset="0"   stop-color="#e1e1e1" stop-opacity="1" />
             <stop offset="1"   stop-color="#e1e1e1" stop-opacity="0.7" />
@@ -2288,14 +2518,14 @@ function buildSoundCollisionMarkup() {
         </defs>
         <ellipse class="sound-impact-core" cx="0" cy="12" rx="95" ry="54" />
         <g class="sound-letter" data-letter="kieuk" transform="translate(-1030 -250)">
-          <path class="sound-letter-body" data-body="kieuk" d="${kieukPath}" fill="url(#soundConcreteMaterial)" />
+          <path class="sound-letter-body" data-body="kieuk" d="${kieukPath}" fill="#030303" />
           <path class="sound-letter-rim" d="${kieukPath}" />
           <g clip-path="url(#sound-kieuk-clip)">${leftLetterCracks}</g>
           ${kieukStrokeMarkup}
           ${leftFragments}
         </g>
         <g class="sound-letter" data-letter="tikeut" transform="translate(365 -260)">
-          <path class="sound-letter-body" data-body="tikeut" d="${tikeutPath}" fill="url(#soundConcreteMaterial)" />
+          <path class="sound-letter-body" data-body="tikeut" d="${tikeutPath}" fill="#030303" />
           <path class="sound-letter-rim" d="${tikeutPath}" />
           <g clip-path="url(#sound-tikeut-clip)">${rightLetterCracks}</g>
           ${tikeutStrokeMarkup}
@@ -2367,7 +2597,7 @@ function buildImpactFragmentMarkup(letter, count, seed) {
       <polygon
         class="sound-fragment"
         points="${points}"
-        fill="url(#soundConcreteMaterial)"
+        fill="#030303"
         data-start="${(random() * 0.18).toFixed(3)}"
         data-dir="${direction.toFixed(3)}"
         data-spin="${((random() - 0.5) * (isLarge ? 520 : 860)).toFixed(2)}"
@@ -2380,21 +2610,21 @@ function buildImpactFragmentMarkup(letter, count, seed) {
   return items.join("");
 }
 
-// °¢µµ¡¤±æÀÌ¸¦ ÁÖ¸é ³¯Ä«·Ó°Ô ²ªÀÌ´Â ±Õ¿­ Áß½É¼± °æ·Î¸¦ ¹ÝÈ¯
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¸ï¿½ ï¿½Ö¸ï¿½ ï¿½ï¿½Ä«ï¿½Ó°ï¿½ ï¿½ï¿½ï¿½Ì´ï¿½ ï¿½Õ¿ï¿½ ï¿½ß½É¼ï¿½ ï¿½ï¿½Î¸ï¿½ ï¿½ï¿½È¯
 function growCrack(startX, startY, angle, length, random) {
   const points = [[startX, startY]];
   let cur = angle;
   let remaining = length;
   let total = 0;
   while (remaining > 4) {
-    // ±âº» ¹æÇâ Èçµé¸²
+    // ï¿½âº» ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½é¸²
     cur += (random() - 0.5) * 0.45;
-    // °¡²û °áÁ¤¸³ °æ°è¸¦ ¸¸³­ °ÍÃ³·³ ±Þ°ÝÈ÷ ²ªÀÓ
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½è¸¦ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ã³ï¿½ï¿½ ï¿½Þ°ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     if (random() < 0.18) cur += (random() - 0.5) * 1.1;
-    // ¼¼±×¸ÕÆ® ±æÀÌ¸¦ ºÒ±ÕÀÏÇÏ°Ô (ÂªÀº °Í°ú ±ä °ÍÀÌ ¼¯ÀÓ)
+    // ï¿½ï¿½ï¿½×¸ï¿½Æ® ï¿½ï¿½ï¿½Ì¸ï¿½ ï¿½Ò±ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ (Âªï¿½ï¿½ ï¿½Í°ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
     const step = random() < 0.25
-      ? 4 + random() * 8        // ÂªÀº ¼¼±×¸ÕÆ®
-      : 12 + random() * 22;     // ±ä ¼¼±×¸ÕÆ®
+      ? 4 + random() * 8        // Âªï¿½ï¿½ ï¿½ï¿½ï¿½×¸ï¿½Æ®
+      : 12 + random() * 22;     // ï¿½ï¿½ ï¿½ï¿½ï¿½×¸ï¿½Æ®
     const clamp = Math.min(step, remaining);
     const prev = points[points.length - 1];
     const nx = prev[0] + Math.cos(cur) * clamp;
@@ -2406,8 +2636,8 @@ function growCrack(startX, startY, angle, length, random) {
   return { points, length: total };
 }
 
-// Áß½É¼±À» ¾çÂÊÀ¸·Î È®ÀåÇØ Ã¤¿öÁø ½û±âÇü ´Ù°¢Çü Æ÷ÀÎÆ® »ý¼º
-// ³Êºñ´Â ºñ¼±ÇüÀ¸·Î °¨¼Ò ? ¿À·¡ ³Ð°Ô À¯ÁöµÇ´Ù ³¡¿¡¼­ ±Þ°ÝÈ÷ Á¼¾ÆÁü
+// ï¿½ß½É¼ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½ï¿½ï¿½ Ã¤ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù°ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
+// ï¿½Êºï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ? ï¿½ï¿½ï¿½ï¿½ ï¿½Ð°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Þ°ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 function expandCrackToPolygon(points, startW, endW) {
   const n = points.length;
   if (n < 2) return null;
@@ -2415,7 +2645,7 @@ function expandCrackToPolygon(points, startW, endW) {
 
   for (let i = 0; i < n; i++) {
     const t = i / Math.max(1, n - 1);
-    // ºñ¼±Çü Å×ÀÌÆÛ: t^2.2 ? ¾ÕÂÊÀº ³Ð°í ³¡¿¡¼­¸¸ »ÏÁ·ÇØÁü
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: t^2.2 ? ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ð°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     const taper = Math.pow(t, 2.2);
     const hw = (startW * (1 - taper) + endW * taper) * 0.5;
 
@@ -2443,147 +2673,64 @@ function buildImpactLetterCrackMarkup(letter, count, seed) {
   const result = [];
   const isLeft = letter === "kieuk";
 
-  // Ãæµ¹ ¸é x / ¾ÈÂÊ ¹æÇâ °¢µµ ±âÁØ
-  const edgeX   = isLeft ? 694 : 72;
-  const inward  = isLeft ? Math.PI : 0;          // ¤»´Â ¿ÞÂÊ, ¤¼´Â ¿À¸¥ÂÊÀ¸·Î ±Õ¿­ ÁøÇà
-  const zoneTop = 140;
-  const zoneBot = 600;
+  // Collision edge x and inward direction
+  const edgeX = isLeft ? 694 : 72;
+  const inwardSign = isLeft ? -1 : 1;
 
-  const gradId = isLeft ? "crack-grad-kieuk" : "crack-grad-tikeut";
-
-  // Áß½É¼± + ³Êºñ¸¦ ¹Þ¾Æ Ã¤¿öÁø ½û±âÇü ´Ù°¢ÇüÀ» °á°ú¿¡ Ãß°¡
-  function emit(centerPoints, startW, endW, delay) {
-    if (centerPoints.length < 2) return;
-    const polyPts = expandCrackToPolygon(centerPoints, startW, endW);
-    if (!polyPts || polyPts.length < 3) return;
-    const pl = polyPts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-    result.push(
-      `<polygon class="sound-letter-crack" points="${pl}" data-delay="${delay.toFixed(3)}" fill="url(#${gradId})" />`,
-    );
-  }
-
-  // ¦¡¦¡ ÀÀ·Â ÁýÁßÁ¡: ½ÇÁ¦ Ãæ°ÝÀÌ ÁýÁßµÇ´Â À§Ä¡ 2~3°÷ ¦¡¦¡
-  // È¹ÀÇ ¸ð¼­¸®/³¡ ºÎºÐ¿¡ ÁýÁß (±ÕÀÏ ºÐÆ÷ ´ë½Å Å¬·¯½ºÅÍ)
-  const stressY = isLeft
-    ? [210, 390, 565]   // ¤»: À§ È¹ ³¡, Áß¾Ó, ¾Æ·¡ È¹ ³¡ ±ÙÃ³
-    : [205, 390, 560];  // ¤¼: À§ È¹ ³¡, Áß¾Ó, ¾Æ·¡ È¹ ³¡ ±ÙÃ³
-
-  const mainCracks = [];
+  // Stress zones: where horizontal strokes meet the collision edge
+  const stressY = isLeft ? [210, 390, 565] : [205, 390, 560];
 
   stressY.forEach((sy, si) => {
-    // °¢ ÀÀ·ÂÁ¡ ÁÖº¯¿¡ 3~5°³ ±Õ¿­ Å¬·¯½ºÅÍ »ý¼º
-    const clusterCount = 3 + Math.floor(random() * 3);
-    for (let i = 0; i < clusterCount; i++) {
-      // ÀÀ·ÂÁ¡ ÁÖº¯¿¡ ºÒ±ÕÀÏÇÏ°Ô ºÐÆ÷ (¸Ö¼ö·Ï µå¹°°Ô)
-      const spread = Math.pow(random(), 0.7) * 95;
-      const startY = sy + (random() > 0.5 ? spread : -spread) * (random() * 0.9 + 0.1);
-      const startX = edgeX + (random() - 0.5) * 10;
+    // 4-6 large irregular broken chunks per stress zone
+    const chunkCount = 4 + Math.floor(random() * 3);
+    for (let i = 0; i < chunkCount; i++) {
+      const spread = Math.pow(random(), 0.55) * 105;
+      const cy = sy + (random() > 0.5 ? spread : -spread) * (random() * 0.85 + 0.15);
+      const cx = edgeX + inwardSign * (random() * 12);
 
-      // °¢µµ: ÀÀ·ÂÁ¡ Áß½É¿¡¼­´Â ´õ ¼öÆò, ¹Ù±ùÀ¸·Î °¥¼ö·Ï ´õ ¹ú¾îÁü
-      const distRatio = Math.abs(startY - sy) / 95;
-      const maxSpread = 1.1 + distRatio * 0.8;
-      const angle = inward + (random() - 0.5) * maxSpread;
+      // Large irregular polygon chunk â€” 5~8 vertices
+      const vCount = 5 + Math.floor(random() * 4);
+      const chunkW = 30 + random() * 75;
+      const chunkH = 22 + random() * 62;
+      const pts = [];
+      for (let v = 0; v < vCount; v++) {
+        const baseAngle = (v / vCount) * Math.PI * 2 + (random() - 0.5) * (Math.PI / vCount) * 1.4;
+        // Bias chunk to extend inward from the collision edge
+        const rx = chunkW * 0.5 * (0.35 + random() * 0.72);
+        const ry = chunkH * 0.5 * (0.35 + random() * 0.72);
+        const px = cx + inwardSign * Math.abs(Math.cos(baseAngle)) * rx * 0.9 + Math.cos(baseAngle) * rx * 0.35;
+        const py = cy + Math.sin(baseAngle) * ry;
+        pts.push(`${px.toFixed(1)},${py.toFixed(1)}`);
+      }
 
-      // ÀÀ·ÂÁ¡ Áß½É ±Õ¿­Àº ±æ°í ±½°Ô, ÁÖº¯Àº Âª°í ¾ã°Ô
-      const centerDist = Math.abs(startY - sy) / 95;
-      const crackLen = (55 + random() * 55) * (1 - centerDist * 0.5);
-      // ±½±â¸¦ 3´Ü°è·Î ÀÚ¿¬½º·´°Ô ºÐÆ÷: ±½Àº(40%) / Áß°£(35%) / ¾ãÀº(25%)
-      const widthTier = random();
-      const baseMult = widthTier < 0.40 ? (22 + random() * 14)   // ±½Àº ±Õ¿­: 22~36
-                     : widthTier < 0.75 ? (10 + random() * 10)   // Áß°£ ±Õ¿­: 10~20
-                     :                    (3  + random() * 6);    // ¾ãÀº ±Õ¿­: 3~9
-      const startW = baseMult * (1 - centerDist * 0.4);
-      const endW   = 0.2 + random() * 0.8;
+      // Randomise shade so chunks look like jagged broken material
+      const shade = random();
+      const fill = shade < 0.45 ? "#040404" : shade < 0.78 ? "#161616" : "#2a2a2a";
+      const delay = (random() * 0.035 + si * 0.01).toFixed(3);
 
-      const { points } = growCrack(startX, startY, angle, crackLen, random);
-      emit(points, startW, endW, random() * 0.04 + si * 0.01);
-      mainCracks.push({ points, angle, startW });
+      result.push(
+        `<polygon class="sound-letter-crack" points="${pts.join(" ")}" data-delay="${delay}" fill="${fill}" />`,
+      );
 
-      // °¡Áö (ÀÀ·ÂÁ¡ ±ÙÃ³ÀÏ¼ö·Ï ´õ ÀÚÁÖ)
-      const branchProb = 0.55 + (1 - centerDist) * 0.3;
-      if (random() < branchProb && points.length > 2) {
-        const bIdx = Math.floor(points.length * (0.25 + random() * 0.45));
-        const safeIdx = Math.min(bIdx, points.length - 1);
-        const [bx, by] = points[safeIdx];
-
-        // ºÐ±â ÁöÁ¡ÀÇ ½ÇÁ¦ µÎ²² °è»ê (ºñ¼±Çü Å×ÀÌÆÛ Àû¿ë)
-        const bT     = safeIdx / Math.max(1, points.length - 1);
-        const bTaper = Math.pow(bT, 2.2);
-        const widthAtBranch = startW * (1 - bTaper) + endW * bTaper;
-
-        const bSign  = random() > 0.5 ? 1 : -1;
-        // °¢µµ: ÁÖ±Õ¿­¿¡¼­ 20~55¡Æ ¸¸ ¹ú¾îÁü (³Ê¹« Á÷°¢ÀÌ µÇÁö ¾Êµµ·Ï)
-        const bAngle = angle + bSign * (0.35 + random() * 0.6);
-        const bLen   = 12 + random() * 32;
-        const br     = growCrack(bx, by, bAngle, bLen, random);
-        // °¡Áö ½ÃÀÛ ³Êºñ = ºÐ±â ÁöÁ¡ µÎ²²ÀÇ 45~65% (¿¬¼Ó¼º ÀÖ°Ô, ±½±â Â÷ÀÌ À¯Áö)
-        const bStartW = widthAtBranch * (0.45 + random() * 0.20);
-        emit(br.points, bStartW, 0.2, 0.02 + random() * 0.07);
-
-        // 2Â÷ ºÐ±â (35% È®·ü, ´õ ¾ã°Ô)
-        if (random() < 0.35 && br.points.length > 2) {
-          const b2Idx  = Math.floor(br.points.length * (0.3 + random() * 0.4));
-          const safe2  = Math.min(b2Idx, br.points.length - 1);
-          const [b2x, b2y] = br.points[safe2];
-          const b2T    = safe2 / Math.max(1, br.points.length - 1);
-          const b2W    = bStartW * (1 - Math.pow(b2T, 2.2)) * (0.45 + random() * 0.15);
-          const b2Angle = bAngle + (random() - 0.5) * 0.8;
-          const b2Len  = 6 + random() * 18;
-          const br2    = growCrack(b2x, b2y, b2Angle, b2Len, random);
-          emit(br2.points, b2W, 0.2, 0.04 + random() * 0.08);
+      // One smaller sub-chunk adjacent to the main chunk (adds rubble texture)
+      if (random() < 0.62) {
+        const sx2 = cx + inwardSign * (chunkW * 0.3 + random() * chunkW * 0.5);
+        const sy2 = cy + (random() - 0.5) * chunkH * 0.9;
+        const sw = 12 + random() * 38;
+        const sh = 10 + random() * 30;
+        const sv = 4 + Math.floor(random() * 3);
+        const spts = [];
+        for (let v = 0; v < sv; v++) {
+          const a = (v / sv) * Math.PI * 2 + (random() - 0.5) * 0.9;
+          spts.push(`${(sx2 + Math.cos(a) * sw * (0.4 + random() * 0.6)).toFixed(1)},${(sy2 + Math.sin(a) * sh * (0.4 + random() * 0.6)).toFixed(1)}`);
         }
+        const sfill = random() < 0.5 ? "#080808" : "#1e1e1e";
+        result.push(
+          `<polygon class="sound-letter-crack" points="${spts.join(" ")}" data-delay="${(random() * 0.06 + si * 0.01).toFixed(3)}" fill="${sfill}" />`,
+        );
       }
     }
   });
-
-  // ¦¡¦¡ ¹Ì¼¼ ±Õ¿­: ÁÖ±Õ¿­ ±ÙÃ³¿¡¼­ ÆÄ»ýµÇ´Â ÀÛÀº °á ¦¡¦¡
-  const microCount = 4 + Math.floor(random() * 3);
-  for (let m = 0; m < microCount; m++) {
-    // ÁÖ±Õ¿­ Áß ÇÏ³ª¸¦ °ñ¶ó ±× °æ·Î À§ÀÇ Á¡ ±ÙÃ³¿¡¼­ ½ÃÀÛ
-    const parentCrack = mainCracks[Math.floor(random() * mainCracks.length)];
-    if (!parentCrack) continue;
-    const pIdx = Math.floor(parentCrack.points.length * (0.1 + random() * 0.7));
-    const [px, py] = parentCrack.points[Math.min(pIdx, parentCrack.points.length - 1)];
-
-    // ºÎ¸ð ±Õ¿­ÀÇ ÇØ´ç ÁöÁ¡ µÎ²² °è»ê
-    const pT = pIdx / Math.max(1, parentCrack.points.length - 1);
-    const widthAtP = parentCrack.startW * (1 - Math.pow(pT, 2.2));
-
-    // ¹Ì¼¼±Õ¿­ ½ÃÀÛ ³Êºñ = ºÎ¸ð ±Õ¿­ µÎ²²ÀÇ 20~35% (¾ã°Ô)
-    const mStartW = widthAtP * (0.20 + random() * 0.15);
-    const mAngle  = parentCrack.angle + (random() - 0.5) * 1.4;
-    const mLen    = 5 + random() * 16;
-    const { points: mp } = growCrack(px + (random()-0.5)*6, py + (random()-0.5)*6, mAngle, mLen, random);
-    emit(mp, mStartW, 0.1, 0.07 + random() * 0.12);
-  }
-
-  // ¦¡¦¡ ¿¬°á ±Õ¿­: ÀÎÁ¢ ±Õ¿­ »çÀÌ¸¦ µå¹®µå¹® ÀÕ´Â °¡´Â ¼± ¦¡¦¡
-  for (let a = 0; a < mainCracks.length - 1; a++) {
-    for (let b = a + 2; b < Math.min(a + 5, mainCracks.length); b++) {
-      if (random() > 0.22) continue;
-      const ptsA = mainCracks[a].points;
-      const ptsB = mainCracks[b].points;
-      const ia = Math.floor(ptsA.length * (0.3 + random() * 0.4));
-      const ib = Math.floor(ptsB.length * (0.3 + random() * 0.4));
-      const safeA = Math.min(ia, ptsA.length - 1);
-      const safeB = Math.min(ib, ptsB.length - 1);
-      const [ax, ay] = ptsA[safeA];
-      const [bx, by] = ptsB[safeB];
-      const dist = Math.hypot(bx - ax, by - ay);
-      if (dist < 20 || dist > 80) continue;
-
-      // ¿¬°á¼± µÎ²² = ¾çÂÊ ¿¬°á ÁöÁ¡ µÎ²²ÀÇ Æò±Õ ¡¿ 40%
-      const tA = safeA / Math.max(1, ptsA.length - 1);
-      const tB = safeB / Math.max(1, ptsB.length - 1);
-      const wA = mainCracks[a].startW * (1 - Math.pow(tA, 2.2));
-      const wB = mainCracks[b].startW * (1 - Math.pow(tB, 2.2));
-      const bridgeW = (wA + wB) * 0.5 * (0.35 + random() * 0.12);
-
-      const bAngle = Math.atan2(by - ay, bx - ax);
-      const br = growCrack(ax, ay, bAngle, dist, random);
-      emit(br.points, bridgeW, 0.1, 0.05 + random() * 0.1);
-    }
-  }
 
   return result.join("");
 }
@@ -3118,7 +3265,7 @@ if (enablePointerReveal) {
 }
 
 
-// Record 3D ?ê¸°??ì¹´ë£¨?€ (Codrops êµ¬ì¡°)
+// Record 3D ?ï¿½ê¸°??ì¹´ë£¨?ï¿½ (Codrops êµ¬ì¡°)
 (function initRecordCarousel() {
   const scenes = document.querySelectorAll(".scene-wrapper .scene");
   if (!scenes.length) return;
@@ -3135,7 +3282,7 @@ if (enablePointerReveal) {
 
   function lerp(a, b, t) { return a + (b - a) * t; }
 
-  // ?¤í¬ë¡¤ê³¼ ?„ì „ ë¶„ë¦¬???Œì „ ?íƒœ
+  // ?ï¿½í¬ë¡¤ê³¼ ?ï¿½ì „ ë¶„ë¦¬???ï¿½ì „ ?ï¿½íƒœ
   const rot = Array.from(scenes).map(() => ({ current: 0, target: 0 }));
   let rafId = null;
   let scrollFrameId = null;
@@ -3151,7 +3298,7 @@ if (enablePointerReveal) {
     rafId = needs ? requestAnimationFrame(render) : null;
   }
 
-  // ê°?scene??viewport ì¤‘ì•™???¼ë§ˆ??ê°€ê¹Œìš´ì§€ (0=ë©€??1=?•ì¤‘??
+  // ï¿½?scene??viewport ì¤‘ì•™???ï¿½ë§ˆ??ê°€ê¹Œìš´ì§€ (0=ë©€??1=?ï¿½ì¤‘??
   function getActiveFactor(scene) {
     const rect  = scene.getBoundingClientRect();
     if (rect.bottom < 0 || rect.top > window.innerHeight) return 0;
