@@ -604,6 +604,18 @@ a {
   overflow: hidden;
 }
 
+.record-cylinder-clip.is-pinned {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+}
+
+.record-reveal-inner {
+  width: 100%;
+}
+
 .record-cylinder-stage {
   position: absolute;
   inset: 0;
@@ -613,7 +625,7 @@ a {
 
 .record-cylinder {
   position: absolute;
-  top: 50%;
+  top: calc(50% - 15svh);
   left: 50%;
   transform-style: preserve-3d;
 }
