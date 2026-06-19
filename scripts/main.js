@@ -17,7 +17,7 @@ const heartVideoTrack = document.querySelector(".heart-video-track");
 const storyPageChange = document.querySelector(".story-page-change");
 const storyChangeTextPanel = document.querySelector(".story-change-text-panel");
 const changeObjects = Array.from(document.querySelectorAll(".change-object"));
-const worldMapInteraction = document.querySelector(".story-page-world .world-map-interaction");
+const worldMapInteraction = document.querySelector(".story-page-world .world-map-frame");
 
 const inkOverlay = document.querySelector(".ink-overlay");
 const siteMenu = document.querySelector(".site-menu");
@@ -222,7 +222,7 @@ function setChangeObjectInteraction() {
   const rect = storyPageChange.getBoundingClientRect();
   const scrollableDistance = Math.max(1, storyPageChange.offsetHeight - window.innerHeight);
   const scrollProgress = Math.min(1, Math.max(0, -rect.top / scrollableDistance));
-  const releaseProgress = 0.92;
+  const releaseProgress = 0.5;
   const isPinned = rect.top <= 0 && scrollProgress < releaseProgress && rect.bottom > window.innerHeight;
   const isReleased = rect.top <= 0 && scrollProgress >= releaseProgress;
 
@@ -249,7 +249,10 @@ function setChangeObjectInteraction() {
     const localProgress = Math.min(1, Math.max(0, (objectProgress - start) / (end - start)));
     const approachProgress = smoothProgress(localProgress, 0, 0.42);
     const exitProgress = smoothProgress(localProgress, 0.58, 1);
-    const visibility = isPinned ? Math.max(0, Math.min(1, approachProgress * (1 - exitProgress) * 1.35)) : 0;
+    const isLastObject = index === changeObjects.length - 1;
+    const releasedVisibility = isReleased && isLastObject ? 1 : 0;
+    const pinnedVisibility = Math.max(0, Math.min(1, approachProgress * (1 - exitProgress) * 1.35));
+    const visibility = isPinned ? pinnedVisibility : releasedVisibility;
     const translateY = 150 * (1 - approachProgress) - 110 * exitProgress;
     const scale = 0.46 + approachProgress * 0.72 + exitProgress * 1.65;
     const blur = exitProgress * 5;
@@ -269,7 +272,7 @@ function handleChangeObjectWheel(event) {
   const rect = storyPageChange.getBoundingClientRect();
   const scrollableDistance = Math.max(1, storyPageChange.offsetHeight - window.innerHeight);
   const scrollProgress = Math.min(1, Math.max(0, -rect.top / scrollableDistance));
-  const isActive = rect.top <= 0 && scrollProgress < 0.92 && rect.bottom > window.innerHeight;
+  const isActive = rect.top <= 0 && scrollProgress < 0.5 && rect.bottom > window.innerHeight;
 
   if (!isActive) {
     return;
@@ -339,7 +342,7 @@ function initWorldMapInteraction() {
   const particles = Array.from(worldMapInteraction.querySelectorAll(".world-particle"));
   const glows = Array.from(worldMapInteraction.querySelectorAll(".world-destination-glow"));
   const koreaPoint = worldMapInteraction.querySelector(".world-korea-point");
-  const koreaPosition = { left: "45.5%", top: "41.5%" };
+  const koreaPosition = { left: "45%", top: "40%" };
   const routeViewBox = { width: 1321, height: 659 };
 
   if (!routes.length || !particles.length || !glows.length) {
@@ -363,9 +366,9 @@ function initWorldMapInteraction() {
 
     if (routeFlow) {
       gsapInstance.set(routeFlow, {
-        strokeDasharray: routeLength,
+        strokeDasharray: `${routeLength} ${routeLength}`,
         strokeDashoffset: routeLength,
-        opacity: 1,
+        opacity: 0,
       });
     }
 
@@ -378,8 +381,14 @@ function initWorldMapInteraction() {
   const flowStagger = flowDuration * 0.7;
 
   flowOrder.forEach((routeIndex, orderIndex) => {
-    const { routeFlow } = routeMetrics[routeIndex];
+    const { route, routeFlow } = routeMetrics[routeIndex];
     if (!routeFlow) return;
+
+    timeline.to(routeFlow, {
+      opacity: 1,
+      duration: 0.04,
+      ease: "none",
+    }, orderIndex * flowStagger);
 
     timeline.to(routeFlow, {
       strokeDashoffset: 0,
@@ -425,7 +434,7 @@ function initWorldMapInteraction() {
     }, 0.02);
 
     timeline.to(glows[index], {
-      opacity: 1,
+      autoAlpha: 1,
       scale: 1,
       duration: 0.42,
       ease: "sine.out",
@@ -441,10 +450,52 @@ function initWorldMapInteraction() {
     }, 0);
   }
 
-  worldMapInteraction.addEventListener("mouseenter", () => timeline.timeScale(1).play());
-  worldMapInteraction.addEventListener("mouseleave", () => timeline.timeScale(3).reverse());
-  worldMapInteraction.addEventListener("focusin", () => timeline.timeScale(1).play());
-  worldMapInteraction.addEventListener("focusout", () => timeline.timeScale(3).reverse());
+  const resetWorldMapState = () => {
+    particles.forEach((particle) => {
+      gsapInstance.set(particle, {
+        left: koreaPosition.left,
+        top: koreaPosition.top,
+        opacity: 0,
+        scale: 0.42,
+      });
+    });
+
+    glows.forEach((glow) => {
+      gsapInstance.set(glow, {
+        autoAlpha: 0,
+        scale: 0.7,
+      });
+    });
+
+    routeMetrics.forEach(({ routeFlow, routeLength }) => {
+      if (!routeFlow) return;
+
+      gsapInstance.set(routeFlow, {
+        strokeDashoffset: routeLength,
+        opacity: 0,
+      });
+    });
+  };
+
+  timeline.eventCallback("onReverseComplete", resetWorldMapState);
+
+  const playWorldMapTimeline = () => {
+    timeline.timeScale(1).play();
+  };
+
+  const reverseWorldMapTimeline = () => {
+    timeline.timeScale(3).reverse();
+    gsapInstance.delayedCall(0.35, () => {
+      if (timeline.reversed()) {
+        resetWorldMapState();
+      }
+    });
+  };
+
+  worldMapInteraction.addEventListener("mouseenter", playWorldMapTimeline);
+  worldMapInteraction.addEventListener("mouseleave", reverseWorldMapTimeline);
+  worldMapInteraction.addEventListener("focusin", playWorldMapTimeline);
+  worldMapInteraction.addEventListener("focusout", reverseWorldMapTimeline);
 }
 
 initWorldMapInteraction();
