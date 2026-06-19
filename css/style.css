@@ -962,10 +962,10 @@ a {
 
 .world-map-interaction {
   position: absolute;
-  top: 49.5svh;
+  top: 60svh;
   left: 50%;
   z-index: 2;
-  width: min(74vw, 1321px);
+  width: max(min(62vw, 1100px), 57.292vw);
   aspect-ratio: 1321 / 659;
   transform: translateX(-50%);
   cursor: pointer;
