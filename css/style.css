@@ -896,24 +896,7 @@ a {
   pointer-events: none;
 }
 
-.sound-interaction-webgl {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  height: 100%;
-  overflow: hidden;
-  background: #e1e1e1;
-  pointer-events: none;
-}
-
-
 .story-intro-webgl canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.sound-interaction-webgl canvas {
   display: block;
   width: 100%;
   height: 100%;
@@ -937,6 +920,11 @@ a {
 
 .story-sound-text-panel {
   top: auto;
+}
+
+.sound {
+  width: 100vw;
+  height: 100vh;
 }
 
 .story-record-text-panel {
@@ -1108,201 +1096,6 @@ a {
   font-size: clamp(1.3542vw, 1.875vw, 1.875vw);
   font-weight: 700;
 }
-
-.sound-interaction {
-  position: relative;
-  min-height: 640svh;
-  z-index: 2;
-}
-
-.sound-interaction-sticky {
-  position: sticky;
-  top: 0;
-  height: 100svh;
-  min-height: 100svh;
-  overflow: hidden;
-  isolation: isolate;
-}
-
-.sound-interaction.is-pinned .sound-interaction-sticky {
-  position: fixed;
-  right: 0;
-  left: 0;
-  z-index: 4;
-}
-
-.sound-interaction.is-released .sound-interaction-sticky {
-  position: absolute;
-  top: auto;
-  right: 0;
-  bottom: 0;
-  left: 0;
-}
-
-.sound-collision-mount,
-.sound-collision-root {
-  position: absolute;
-  inset: 0;
-}
-
-.sound-collision-root {
-  z-index: 2;
-  overflow: hidden;
-  pointer-events: none;
-  transform: translate3d(var(--sound-shake-x, 0), var(--sound-shake-y, 0), 0);
-}
-
-.sound-collision-scene,
-.sound-collision-svg,
-.sound-dust-layer {
-  position: absolute;
-  inset: 0;
-}
-
-.sound-collision-scene {
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.24), rgba(225, 225, 225, 0) 34%),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1) 18%, rgba(0, 0, 0, 0.08) 50%, rgba(255, 255, 255, 0.1) 82%, rgba(0, 0, 0, 0.1));
-}
-
-.sound-collision-scene::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  opacity: var(--sound-impact-blur, 0);
-  background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0) 44%);
-  filter: blur(18px);
-  pointer-events: none;
-}
-
-.sound-collision-svg {
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  transform-origin: center;
-}
-
-.sound-letter,
-.aff-letter {
-  transform-box: fill-box;
-  transform-origin: center;
-  will-change: transform, opacity, filter;
-  filter: drop-shadow(0 34px 38px rgba(0, 0, 0, 0.42));
-}
-
-.sound-letter-body {
-  filter: none;
-}
-
-.sound-letter > .sound-letter-rim,
-.sound-letter-stroke .sound-letter-rim {
-  display: none;
-}
-
-.aff-letter-stroke {
-  fill: none;
-  stroke: #030303;
-  stroke-width: 104;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.sound-letter-stroke {
-  will-change: transform, opacity;
-  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.45));
-}
-
-.sound-letter-rim {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.1);
-  stroke-width: 3;
-  mix-blend-mode: screen;
-}
-
-.sound-fragment {
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-  will-change: transform, opacity;
-  filter: drop-shadow(0 18px 20px rgba(0, 0, 0, 0.38));
-}
-
-.sound-letter-crack {
-  opacity: 0;
-}
-
-.sound-impact-core {
-  fill: rgba(18, 17, 15, 0.75);
-  opacity: 0;
-  filter: blur(15px);
-}
-
-.sound-dust-layer {
-  z-index: 3;
-  overflow: hidden;
-}
-
-.sound-dust {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--dust-size, 8px);
-  height: var(--dust-size, 8px);
-  border-radius: 999px;
-  opacity: 0;
-  background: rgba(30, 29, 27, 0.42);
-  filter: blur(var(--dust-blur, 4px));
-  transform: translate3d(-50%, -50%, 0) scale(0.4);
-  will-change: transform, opacity;
-}
-
-.sound-chip {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--chip-w, 12px);
-  height: var(--chip-h, 8px);
-  opacity: 0;
-  background: #11100f;
-  clip-path: polygon(12% 8%, 92% 0, 100% 76%, 42% 100%, 0 58%);
-  filter:
-    drop-shadow(0 12px 14px rgba(0, 0, 0, 0.44))
-    drop-shadow(-1px -1px 0 rgba(255, 255, 255, 0.08));
-  transform: translate3d(-50%, -50%, 0);
-  will-change: transform, opacity;
-}
-
-.sound-stage {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: grid;
-  place-items: start center;
-  padding-top: clamp(3.3333vw, 9.26vh, 5.2083vw);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.sound-stage-plosive {
-  opacity: 1;
-}
-
-.sound-stage-title-wrap {
-  overflow: hidden;
-}
-
-.sound-stage-title {
-  margin: 0;
-  color: #000;
-  font-size: clamp(1.4583vw, 1.667vw, 1.6667vw);
-  font-weight: 700;
-  line-height: 1.3;
-  display: block;
-}
-
 
 .heart-video-interaction {
   position: relative;
