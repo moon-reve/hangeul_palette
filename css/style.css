@@ -1332,6 +1332,8 @@ a {
 
 .heart-video-scene {
   position: relative;
+  width: 80%;
+  margin: 0 auto;
   height: 100svh;
   min-height: 100svh;
 }
@@ -1349,60 +1351,96 @@ a {
 
 .heart-video-placeholder {
   position: absolute;
+  overflow: hidden;
   background: rgba(255, 255, 255, 0.32);
   border: 0.0521vw solid rgba(0, 0, 0, 0.12);
   box-shadow: 0 1.1458vw 3.6458vw rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(0.2083vw);
 }
 
+.heart-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heart-video-row {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.heart-video-row .heart-video-placeholder,
+.heart-video-row .heart-video-title {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+}
+
 /* Scene-01: 이미지 좌측(x=208), 텍스트 우측(right=283.77) */
-.heart-video-scene-01 .heart-video-placeholder {
+.heart-video-scene-01 .heart-video-row {
   top: 58svh;
-  left: calc(208 / 1920 * 100%);
+  height: 25.1042vw;
+}
+
+.heart-video-scene-01 .heart-video-placeholder {
   width: min(44.64vw, 44.6354vw);
   aspect-ratio: 857 / 482;
 }
 
 .heart-video-scene-01 .heart-video-title {
-  top: 88svh;
-  right: calc(283.77 / 1920 * 100%);
+  text-align: right;
 }
 
 /* Scene-02: 이미지 우측(x=858), 텍스트 좌측(x=206) */
-.heart-video-scene-02 .heart-video-placeholder {
+.heart-video-scene-02 .heart-video-row {
   top: 38svh;
-  left: calc(858 / 1920 * 100%);
+  right: 0;
+  left: 0;
+  height: 25.1042vw;
+}
+
+.heart-video-scene-02 .heart-video-placeholder {
+  order: 2;
   width: min(44.64vw, 44.6354vw);
   aspect-ratio: 857 / 482;
 }
 
 .heart-video-scene-02 .heart-video-title {
-  top: 59svh;
-  left: calc(206 / 1920 * 100%);
+  order: 1;
+  text-align: left;
 }
 
 /* Scene-03: 이미지 좌측(x=208), 텍스트 우측(right=283.77) */
-.heart-video-scene-03 .heart-video-placeholder {
+.heart-video-scene-03 .heart-video-row {
   top: 14svh;
-  left: calc(208 / 1920 * 100%);
+  height: 24.0625vw;
+}
+
+.heart-video-scene-03 .heart-video-placeholder {
   width: min(44.41vw, 44.375vw);
   aspect-ratio: 852 / 462;
 }
 
 .heart-video-scene-03 .heart-video-title {
-  top: 66svh;
-  right: calc(283.77 / 1920 * 100%);
+  text-align: right;
 }
 
-/* Scene-04: 텍스트 좌측(x=206), 이미지 중앙(x=678) */
 .heart-video-scene-04 .heart-video-title {
   top: 19svh;
-  left: calc(206 / 1920 * 100%);
+  left: 0;
+  text-align: left;
 }
 
 .heart-video-scene-04 .heart-video-placeholder {
   top: 38svh;
-  left: calc(678 / 1920 * 100%);
+  right: 0;
   width: min(44.64vw, 44.6354vw);
   aspect-ratio: 16 / 9;
   transform: none;
@@ -1486,6 +1524,7 @@ a {
   --king-frame-fill-opacity: 0;
   --king-video-opacity: 0;
   --king-video-offset: 5svh;
+  --king-video-scrim-opacity: 0;
   --king-video-copy-opacity: 0;
   --king-video-copy-offset: 0.9375vw;
   position: relative;
@@ -1562,7 +1601,7 @@ a {
 .king-people-video-frame {
   position: relative;
   z-index: 2;
-  width: min(76vw, 76.0417vw);
+  width: 90vw;
   aspect-ratio: 16 / 9;
   overflow: hidden;
   background: transparent;
@@ -1613,16 +1652,25 @@ a {
   object-fit: cover;
 }
 
+.king-people-video-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: var(--king-video-scrim-opacity);
+  pointer-events: none;
+}
+
 .king-people-video-copy {
   position: absolute;
   left: 50%;
   top: 50%;
-  z-index: 2;
+  z-index: 3;
   width: min(82%, 58.3333vw);
   margin: 0;
   color: #fff;
   font-family: "MaruBuri", serif;
-  font-size: 1.3021vw;
+  font-size: 1.5625vw;
   font-weight: 400;
   line-height: 1.38;
   text-align: center;
@@ -1827,7 +1875,7 @@ a {
   .king-people-video-copy {
     top: 50%;
     width: min(86%, 29.1667vw);
-    font-size: clamp(0.9375vw, 5.2vw, 1.3021vw);
+    font-size: clamp(0.9375vw, 5.2vw, 1.5625vw);
   }
 
   .king-people-text-panel {
@@ -1910,15 +1958,41 @@ a {
   }
 
   .heart-video-title {
+    position: absolute;
     right: 1.4583vw;
     left: 1.4583vw;
     font-size: clamp(1.25vw, 7vw, 1.7708vw);
+  }
+
+  .heart-video-scene {
+    width: 100%;
+  }
+
+  .heart-video-scene-01,
+  .heart-video-scene-02,
+  .heart-video-scene-03 {
+    display: block;
+    padding: 0;
+  }
+
+  .heart-video-scene-01 .heart-video-row,
+  .heart-video-scene-02 .heart-video-row,
+  .heart-video-scene-03 .heart-video-row {
+    position: static;
+    display: block;
+    height: auto;
+  }
+
+  .heart-video-row .heart-video-placeholder,
+  .heart-video-row .heart-video-title {
+    position: absolute;
   }
 
   .heart-video-scene-01 .heart-video-title,
   .heart-video-scene-04 .heart-video-title {
     top: 15svh;
     left: 1.4583vw;
+    text-align: left;
   }
 
   .heart-video-scene-02 .heart-video-title,
@@ -1928,13 +2002,28 @@ a {
     left: 1.4583vw;
   }
 
+  .heart-video-scene-01 .heart-video-placeholder,
   .heart-video-scene-02 .heart-video-placeholder,
   .heart-video-scene-03 .heart-video-placeholder,
   .heart-video-scene-04 .heart-video-placeholder {
+    position: absolute;
     right: 1.4583vw;
     left: 1.4583vw;
     width: auto;
     transform: none;
+  }
+
+  .heart-video-scene-01 .heart-video-placeholder,
+  .heart-video-scene-02 .heart-video-placeholder {
+    top: 38svh;
+  }
+
+  .heart-video-scene-03 .heart-video-placeholder {
+    top: 14svh;
+  }
+
+  .heart-video-scene-04 .heart-video-placeholder {
+    top: 38svh;
   }
 
   .change-object-pen {

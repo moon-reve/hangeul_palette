@@ -28,6 +28,11 @@ const enablePointerReveal = false;
 const enableMenuInkOverlay = true;
 
 let scrollUpdateFrame = null;
+let kingPeopleMaskAnimationFrame = null;
+let kingPeopleMaskAnimationStart = null;
+let kingPeopleMaskAutoProgress = 0;
+const KING_PEOPLE_MASK_FINAL_SIZE = 100;
+const KING_PEOPLE_MASK_AUTO_DURATION = 1400;
 
 function updateScrollLinkedScenes() {
   setHeroTitleStep();
@@ -271,6 +276,31 @@ function initWorldMapInteraction() {
 
 initWorldMapInteraction();
 
+function startKingPeopleMaskAnimation() {
+  if (kingPeopleMaskAutoProgress >= 1 || kingPeopleMaskAnimationFrame !== null) {
+    return;
+  }
+
+  kingPeopleMaskAnimationStart = null;
+  kingPeopleMaskAnimationFrame = requestAnimationFrame(animateKingPeopleMask);
+}
+
+function animateKingPeopleMask(now) {
+  if (kingPeopleMaskAnimationStart === null) {
+    kingPeopleMaskAnimationStart = now - kingPeopleMaskAutoProgress * KING_PEOPLE_MASK_AUTO_DURATION;
+  }
+
+  const elapsed = now - kingPeopleMaskAnimationStart;
+  kingPeopleMaskAutoProgress = Math.min(1, elapsed / KING_PEOPLE_MASK_AUTO_DURATION);
+  setKingPeopleScene();
+
+  if (kingPeopleMaskAutoProgress < 1) {
+    kingPeopleMaskAnimationFrame = requestAnimationFrame(animateKingPeopleMask);
+  } else {
+    kingPeopleMaskAnimationFrame = null;
+  }
+}
+
 function setKingPeopleScene() {
   if (!kingPeopleSection || !kingPeopleVideoScene || !kingPeopleVideoFrame) {
     return;
@@ -279,20 +309,33 @@ function setKingPeopleScene() {
   const rect = kingPeopleSection.getBoundingClientRect();
   const scrollableDistance = Math.max(1, kingPeopleSection.offsetHeight - window.innerHeight);
   const progress = Math.min(1, Math.max(0, -rect.top / scrollableDistance));
-  const maskProgress = smoothProgress(progress, 0.02, 0.82);
-  const videoOpacity = smoothProgress(progress, 0.25, 0.42);
+  const hasEnteredVideoScene = progress > 0.02 && rect.bottom > window.innerHeight * 0.28;
+
+  if (progress <= 0 && rect.top > 0) {
+    kingPeopleMaskAutoProgress = 0;
+    kingPeopleMaskAnimationStart = null;
+  }
+
+  if (hasEnteredVideoScene) {
+    startKingPeopleMaskAnimation();
+  }
+
+  const maskProgress = smoothProgress(kingPeopleMaskAutoProgress, 0, 1);
+  const videoOpacity = smoothProgress(kingPeopleMaskAutoProgress, 0.24, 0.72);
   const copyProgress = smoothProgress(progress, 0.78, 0.98);
   const frameFillOpacity = Math.max(0, Math.min(0.38, maskProgress * (1 - videoOpacity) * 0.38));
-  const videoMaskSize = 1 + maskProgress * 99;
+  const videoMaskSize = 1 + maskProgress * (KING_PEOPLE_MASK_FINAL_SIZE - 1);
   const videoOffset = (1 - videoOpacity) * 5;
   const copyOffset = (1 - copyProgress) * (18 / 1920 * 100);
+  const scrimOpacity = copyProgress * 0.7;
 
-  kingPeopleSection.style.setProperty("--king-video-mask-size", `${videoMaskSize.toFixed(2)}%`);
+  kingPeopleSection.style.setProperty("--king-video-mask-size", videoMaskSize.toFixed(2) + "%");
   kingPeopleSection.style.setProperty("--king-frame-fill-opacity", frameFillOpacity.toFixed(3));
   kingPeopleSection.style.setProperty("--king-video-opacity", videoOpacity.toFixed(3));
-  kingPeopleSection.style.setProperty("--king-video-offset", `${videoOffset.toFixed(2)}svh`);
+  kingPeopleSection.style.setProperty("--king-video-offset", videoOffset.toFixed(2) + "svh");
+  kingPeopleSection.style.setProperty("--king-video-scrim-opacity", scrimOpacity.toFixed(3));
   kingPeopleSection.style.setProperty("--king-video-copy-opacity", copyProgress.toFixed(3));
-  kingPeopleSection.style.setProperty("--king-video-copy-offset", `${copyOffset.toFixed(3)}vw`);
+  kingPeopleSection.style.setProperty("--king-video-copy-offset", copyOffset.toFixed(3) + "vw");
 }
 
 setKingPeopleScene();
