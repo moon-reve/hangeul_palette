@@ -1687,10 +1687,12 @@ a {
 .king-people-text-panel {
   position: absolute;
   z-index: 2;
-  left: calc(208.8828125 / 1920 * 100%);
+  left: 50%;
   top: calc(321 / 1080 * 100%);
   width: min(32.24vw, 32.2396vw);
   color: #000;
+  transform: translateX(-50%);
+  text-align: center;
 }
 
 .king-people-title-number,
