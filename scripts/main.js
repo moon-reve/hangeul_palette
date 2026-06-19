@@ -33,6 +33,15 @@ let kingPeopleMaskAnimationStart = null;
 let kingPeopleMaskAutoProgress = 0;
 const KING_PEOPLE_MASK_FINAL_SIZE = 100;
 const KING_PEOPLE_MASK_AUTO_DURATION = 1400;
+let changeObjectStep = -1;
+let changeObjectProgress = 0;
+let changeObjectAnimationFrame = null;
+let changeObjectAnimationStart = null;
+let changeObjectAnimationFrom = 0;
+let changeObjectAnimationTo = 0;
+const CHANGE_OBJECT_STEP_DISTANCE = 0.2;
+const CHANGE_OBJECT_STEP_CENTER_OFFSET = 0.16;
+const CHANGE_OBJECT_AUTO_DURATION = 760;
 
 function updateScrollLinkedScenes() {
   setHeroTitleStep();
@@ -79,6 +88,54 @@ function smoothProgress(value, start, end) {
   return progress * progress * (3 - 2 * progress);
 }
 
+function getChangeObjectTargetProgress(step) {
+  if (step < 0) {
+    return 0;
+  }
+
+  return step * CHANGE_OBJECT_STEP_DISTANCE + CHANGE_OBJECT_STEP_CENTER_OFFSET;
+}
+
+function easeChangeObjectProgress(value) {
+  return 1 - Math.pow(1 - value, 3);
+}
+
+function animateChangeObjectProgress(now) {
+  if (changeObjectAnimationStart === null) {
+    changeObjectAnimationStart = now;
+  }
+
+  const elapsed = now - changeObjectAnimationStart;
+  const progress = Math.min(1, elapsed / CHANGE_OBJECT_AUTO_DURATION);
+  const easedProgress = easeChangeObjectProgress(progress);
+  changeObjectProgress = changeObjectAnimationFrom + (changeObjectAnimationTo - changeObjectAnimationFrom) * easedProgress;
+  setChangeObjectInteraction();
+
+  if (progress < 1) {
+    changeObjectAnimationFrame = requestAnimationFrame(animateChangeObjectProgress);
+  } else {
+    changeObjectProgress = changeObjectAnimationTo;
+    changeObjectAnimationFrame = null;
+    changeObjectAnimationStart = null;
+    setChangeObjectInteraction();
+  }
+}
+
+function goToChangeObjectStep(step) {
+  const maxStep = changeObjects.length - 1;
+  const nextStep = Math.min(maxStep, Math.max(-1, step));
+
+  if (nextStep === changeObjectStep || changeObjectAnimationFrame !== null) {
+    return;
+  }
+
+  changeObjectStep = nextStep;
+  changeObjectAnimationStart = null;
+  changeObjectAnimationFrom = changeObjectProgress;
+  changeObjectAnimationTo = getChangeObjectTargetProgress(nextStep);
+  changeObjectAnimationFrame = requestAnimationFrame(animateChangeObjectProgress);
+}
+
 function setChangeObjectInteraction() {
   if (!storyPageChange || !storyChangeTextPanel || !changeObjects.length) {
     return;
@@ -86,20 +143,32 @@ function setChangeObjectInteraction() {
 
   const rect = storyPageChange.getBoundingClientRect();
   const scrollableDistance = Math.max(1, storyPageChange.offsetHeight - window.innerHeight);
-  const progress = Math.min(1, Math.max(0, -rect.top / scrollableDistance));
+  const scrollProgress = Math.min(1, Math.max(0, -rect.top / scrollableDistance));
   const releaseProgress = 0.92;
-  const isPinned = rect.top <= 0 && progress < releaseProgress && rect.bottom > window.innerHeight;
-  const isReleased = rect.top <= 0 && progress >= releaseProgress;
+  const isPinned = rect.top <= 0 && scrollProgress < releaseProgress && rect.bottom > window.innerHeight;
+  const isReleased = rect.top <= 0 && scrollProgress >= releaseProgress;
+
+  if (scrollProgress <= 0 && rect.top > 0) {
+    changeObjectStep = -1;
+    changeObjectProgress = 0;
+  }
+
+  if (isReleased && changeObjectAnimationFrame === null) {
+    changeObjectStep = changeObjects.length - 1;
+    changeObjectProgress = getChangeObjectTargetProgress(changeObjectStep);
+  }
 
   storyPageChange.classList.toggle("is-change-pinned", isPinned);
   storyPageChange.classList.toggle("is-change-released", isReleased);
 
   storyPageChange.style.setProperty("--change-object-top", "50svh");
 
+  const objectProgress = changeObjectProgress;
+
   changeObjects.forEach((object, index) => {
-    const start = index * 0.14;
+    const start = index * CHANGE_OBJECT_STEP_DISTANCE;
     const end = start + 0.32;
-    const localProgress = Math.min(1, Math.max(0, (progress - start) / (end - start)));
+    const localProgress = Math.min(1, Math.max(0, (objectProgress - start) / (end - start)));
     const approachProgress = smoothProgress(localProgress, 0, 0.42);
     const exitProgress = smoothProgress(localProgress, 0.58, 1);
     const visibility = isPinned ? Math.max(0, Math.min(1, approachProgress * (1 - exitProgress) * 1.35)) : 0;
@@ -107,11 +176,45 @@ function setChangeObjectInteraction() {
     const scale = 0.46 + approachProgress * 0.72 + exitProgress * 1.65;
     const blur = exitProgress * 5;
 
-    object.style.opacity = `${visibility}`;
-    object.style.filter = blur > 0.1 ? `blur(${(blur / 1920 * 100).toFixed(3)}vw)` : "";
-    object.style.zIndex = `${changeObjects.length - index}`;
-    object.style.transform = `translate3d(-50%, calc(-50% + ${(translateY / 1920 * 100).toFixed(3)}vw), 0) scale(${scale})`;
+    object.style.opacity = String(visibility);
+    object.style.filter = blur > 0.1 ? "blur(" + (blur / 1920 * 100).toFixed(3) + "vw)" : "";
+    object.style.zIndex = String(changeObjects.length - index);
+    object.style.transform = "translate3d(-50%, calc(-50% + " + (translateY / 1920 * 100).toFixed(3) + "vw), 0) scale(" + scale + ")";
   });
+}
+
+function handleChangeObjectWheel(event) {
+  if (!storyPageChange || !changeObjects.length) {
+    return;
+  }
+
+  const rect = storyPageChange.getBoundingClientRect();
+  const scrollableDistance = Math.max(1, storyPageChange.offsetHeight - window.innerHeight);
+  const scrollProgress = Math.min(1, Math.max(0, -rect.top / scrollableDistance));
+  const isActive = rect.top <= 0 && scrollProgress < 0.92 && rect.bottom > window.innerHeight;
+
+  if (!isActive) {
+    return;
+  }
+
+  if (changeObjectAnimationFrame !== null) {
+    event.preventDefault();
+    return;
+  }
+
+  const direction = event.deltaY > 0 ? 1 : -1;
+  const maxStep = changeObjects.length - 1;
+
+  if (direction > 0 && changeObjectStep < maxStep) {
+    event.preventDefault();
+    goToChangeObjectStep(changeObjectStep + 1);
+    return;
+  }
+
+  if (direction < 0 && changeObjectStep > 0) {
+    event.preventDefault();
+    goToChangeObjectStep(changeObjectStep - 1);
+  }
 }
 
 setHeroTitleStep();
@@ -119,6 +222,7 @@ window.addEventListener("scroll", requestScrollLinkedUpdate, { passive: true });
 window.addEventListener("resize", setHeroTitleStep);
 
 setChangeObjectInteraction();
+window.addEventListener("wheel", handleChangeObjectWheel, { passive: false });
 window.addEventListener("resize", setChangeObjectInteraction);
 window.addEventListener("load", setChangeObjectInteraction);
 
