@@ -433,13 +433,131 @@ function initWorldMapInteraction() {
     }, 0);
   }
 
-  worldMapInteraction.addEventListener("mouseenter", () => timeline.timeScale(1).play());
-  worldMapInteraction.addEventListener("mouseleave", () => timeline.timeScale(3).reverse());
+  let mapHovered = false;
+
+  window.addEventListener("mousemove", (e) => {
+    const rect = worldMapInteraction.getBoundingClientRect();
+    const inRange = e.clientY >= rect.top && e.clientY <= rect.bottom;
+
+    if (inRange && !mapHovered) {
+      mapHovered = true;
+      timeline.timeScale(1).play();
+    } else if (!inRange && mapHovered) {
+      mapHovered = false;
+      timeline.timeScale(3).reverse();
+    }
+  });
+
+  window.addEventListener("mouseleave", () => {
+    if (mapHovered) {
+      mapHovered = false;
+      timeline.timeScale(3).reverse();
+    }
+  });
+
   worldMapInteraction.addEventListener("focusin", () => timeline.timeScale(1).play());
   worldMapInteraction.addEventListener("focusout", () => timeline.timeScale(3).reverse());
 }
 
 initWorldMapInteraction();
+
+function initRecordCylinderReveal() {
+  const clip = document.querySelector(".record-cylinder-clip");
+  const items = Array.from(document.querySelectorAll(".record-cylinder-item"));
+  if (!clip || !items.length) return;
+
+  items.forEach(item => {
+    const inner = document.createElement("div");
+    inner.className = "record-reveal-inner";
+    while (item.firstChild) inner.appendChild(item.firstChild);
+    item.appendChild(inner);
+  });
+
+  const inners = Array.from(document.querySelectorAll(".record-reveal-inner"));
+
+  const order = inners.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  const shuffled = order.map(i => inners[i]);
+
+  const offsets = [
+    { x: -28, y: 0 }, { x: 28, y: 0 }, { x: 0, y: -28 }, { x: 0, y: 28 },
+    { x: 28, y: 0 }, { x: -28, y: 0 }, { x: 0, y: 28 }, { x: 0, y: -28 },
+    { x: -28, y: 0 }, { x: 0, y: 28 }, { x: 28, y: 0 }, { x: 0, y: -28 },
+    { x: -28, y: 0 },
+  ];
+
+  shuffled.forEach((inner, i) => {
+    const d = offsets[i];
+    inner.style.opacity = "0";
+    inner.style.transform = `translate(${d.x}px, ${d.y}px)`;
+    inner.style.transition = "opacity 0.42s ease, transform 0.42s ease";
+  });
+
+  let revealedCount = 0;
+  let wheelAccum = 0;
+  let isPinned = false;
+  let placeholder = null;
+  const WHEEL_PER_IMAGE = 100;
+
+  function pin() {
+    if (isPinned) return;
+    isPinned = true;
+    wheelAccum = revealedCount * WHEEL_PER_IMAGE;
+    placeholder = document.createElement("div");
+    placeholder.style.height = "100svh";
+    clip.insertAdjacentElement("afterend", placeholder);
+    clip.classList.add("is-pinned");
+  }
+
+  function unpin() {
+    if (!isPinned) return;
+    isPinned = false;
+    clip.classList.remove("is-pinned");
+    if (placeholder) { placeholder.remove(); placeholder = null; }
+  }
+
+  window.addEventListener("wheel", (e) => {
+    const clipRect = clip.getBoundingClientRect();
+
+    if (isPinned) {
+      if (e.deltaY < 0 && revealedCount <= 0) { unpin(); return; }
+      if (e.deltaY > 0 && revealedCount >= shuffled.length) { unpin(); return; }
+
+      e.preventDefault();
+      wheelAccum = Math.max(0, Math.min(shuffled.length * WHEEL_PER_IMAGE, wheelAccum + e.deltaY));
+      const target = Math.floor(wheelAccum / WHEEL_PER_IMAGE);
+
+      while (revealedCount < target) {
+        shuffled[revealedCount].style.opacity = "1";
+        shuffled[revealedCount].style.transform = "translate(0, 0)";
+        revealedCount++;
+      }
+      while (revealedCount > target) {
+        revealedCount--;
+        const d = offsets[revealedCount];
+        shuffled[revealedCount].style.opacity = "0";
+        shuffled[revealedCount].style.transform = `translate(${d.x}px, ${d.y}px)`;
+      }
+      return;
+    }
+
+    // Trigger pin when downward scroll would bring clip to viewport top
+    // and clip is currently within viewport range (not far off-screen)
+    if (e.deltaY > 0 && revealedCount < shuffled.length) {
+      const clipTopAfterScroll = clipRect.top - e.deltaY;
+      const clipInRange = clipRect.top >= -4 && clipRect.top < window.innerHeight;
+      if (clipTopAfterScroll <= 0 && clipInRange) {
+        e.preventDefault();
+        pin();
+      }
+    }
+  }, { passive: false });
+}
+
+initRecordCylinderReveal();
 
 function startKingPeopleMaskAnimation() {
   if (kingPeopleMaskAutoProgress >= 1 || kingPeopleMaskAnimationFrame !== null) {
