@@ -507,37 +507,49 @@ function initRecordCylinderReveal() {
   let revealedCount = 0;
   let wheelAccum = 0;
   let isPinned = false;
-  let placeholder = null;
+  let exitAccum = 0;
+  let targetScrollY = null;
   const WHEEL_PER_IMAGE = 100;
+  const EXIT_THRESHOLD = 60;
+
+  function getTarget() {
+    if (targetScrollY === null) {
+      targetScrollY = Math.round(clip.getBoundingClientRect().top + window.scrollY);
+    }
+    return targetScrollY;
+  }
 
   function pin() {
     if (isPinned) return;
     isPinned = true;
+    exitAccum = 0;
     wheelAccum = revealedCount * WHEEL_PER_IMAGE;
-    placeholder = document.createElement("div");
-    placeholder.style.height = "100svh";
-    clip.insertAdjacentElement("afterend", placeholder);
-    clip.classList.add("is-pinned");
+    window.scrollTo({ top: getTarget(), left: window.scrollX, behavior: "instant" });
   }
 
   function unpin() {
     if (!isPinned) return;
     isPinned = false;
-    clip.classList.remove("is-pinned");
-    if (placeholder) { placeholder.remove(); placeholder = null; }
   }
 
   window.addEventListener("wheel", (e) => {
-    const clipRect = clip.getBoundingClientRect();
-
     if (isPinned) {
-      if (e.deltaY < 0 && revealedCount <= 0) { unpin(); return; }
-      if (e.deltaY > 0 && revealedCount >= shuffled.length) { unpin(); return; }
-
+      if (e.deltaY < 0 && revealedCount <= 0) {
+        exitAccum += Math.abs(e.deltaY);
+        e.preventDefault();
+        if (exitAccum >= EXIT_THRESHOLD) { exitAccum = 0; unpin(); }
+        return;
+      }
+      if (e.deltaY > 0 && revealedCount >= shuffled.length) {
+        exitAccum += e.deltaY;
+        e.preventDefault();
+        if (exitAccum >= EXIT_THRESHOLD) { exitAccum = 0; unpin(); }
+        return;
+      }
+      exitAccum = 0;
       e.preventDefault();
       wheelAccum = Math.max(0, Math.min(shuffled.length * WHEEL_PER_IMAGE, wheelAccum + e.deltaY));
       const target = Math.floor(wheelAccum / WHEEL_PER_IMAGE);
-
       while (revealedCount < target) {
         shuffled[revealedCount].style.opacity = "1";
         shuffled[revealedCount].style.transform = "translate(0, 0)";
@@ -552,16 +564,16 @@ function initRecordCylinderReveal() {
       return;
     }
 
-    // Trigger pin when downward scroll would bring clip to viewport top
-    // and clip is currently within viewport range (not far off-screen)
-    if (e.deltaY > 0 && revealedCount < shuffled.length) {
-      const clipTopAfterScroll = clipRect.top - e.deltaY;
-      const clipInRange = clipRect.top >= -4 && clipRect.top < window.innerHeight;
-      if (clipTopAfterScroll <= 0 && clipInRange) {
-        e.preventDefault();
-        pin();
-      }
-    }
+    const scrollY = window.scrollY;
+    const tgt = getTarget();
+    // Pin when this scroll would pass through the clip's natural position
+    const passingDown = e.deltaY > 0 && scrollY < tgt && scrollY + e.deltaY >= tgt;
+    const passingUp   = e.deltaY < 0 && scrollY > tgt && scrollY + e.deltaY <= tgt;
+    const atTarget    = Math.abs(scrollY - tgt) <= 2;
+
+    if (passingDown && revealedCount < shuffled.length) { e.preventDefault(); pin(); return; }
+    if ((passingUp || atTarget) && e.deltaY < 0 && revealedCount > 0) { e.preventDefault(); pin(); return; }
+    if (atTarget && e.deltaY > 0 && revealedCount < shuffled.length) { e.preventDefault(); pin(); return; }
   }, { passive: false });
 }
 
